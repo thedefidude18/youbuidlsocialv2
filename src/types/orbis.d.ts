@@ -20,14 +20,15 @@ declare module '@orbisclub/orbis-sdk' {
             context?: string;
             tags?: string[];
             master?: string;
-        }): Promise<any>;
+        }): Promise<{ status: number; doc: string; result: { streamId: string; timestamp: number } }>;
 
         getPosts(options: {
             context?: string;
-        }): Promise<{ data: any[]; error: any }>;
+        }): Promise<{ data: { id: string; content: string }[]; error: { message: string; code: number } | null }>;
 
         getPost(streamId: string): Promise<{ data: any; error: any }>;
 
-        react(postId: string, type: string): Promise<any>;
+        react(postId: string, type: string): Promise<{ status: number; message: string }>;
     }
 }
+
