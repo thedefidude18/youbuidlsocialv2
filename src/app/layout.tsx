@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter } from 'next/font/google';
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { NotificationProvider } from "@/components/notification-provider";
@@ -9,7 +9,10 @@ import { PointsProvider } from "@/providers/points-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { MobileNav } from "@/components/mobile-nav";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-sans',
+});
 
 export const metadata: Metadata = {
   title: "youBuidl",
@@ -25,30 +28,33 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
+      <body>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          <WalletProvider>
-            <AuthProvider>
-              <NotificationProvider>
+          <NotificationProvider>
+            <WalletProvider>
+              <AuthProvider>
                 <PointsProvider>
                   {children}
                   <Toaster />
                   <MobileNav />
                 </PointsProvider>
-              </NotificationProvider>
-            </AuthProvider>
-          </WalletProvider>
+              </AuthProvider>
+            </WalletProvider>
+          </NotificationProvider>
         </ThemeProvider>
       </body>
     </html>
   );
 }
+
+
+
 
 
 

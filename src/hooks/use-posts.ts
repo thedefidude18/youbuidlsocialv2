@@ -1,24 +1,22 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { orbis } from '@/lib/orbis';
 
 export interface Post {
-  stream_id: string;
-  content: {
-    body: string;
-    title?: string;
+  id: string;
+  content: string;
+  author: {
+    id: string;
+    name: string;
+    username: string;
+    avatar: string;
+    verified?: boolean;
   };
-  creator_details: {
-    did: string;
-    profile?: {
-      username: string;
-      pfp: string;
-    }
+  timestamp: string;
+  stats: {
+    likes: number;
+    comments: number;
+    reposts: number;
   };
-  timestamp: number;
-  count_likes: number;
-  count_replies: number;
-  count_haha: number;
-  count_downvotes: number;
 }
 
 export function usePosts() {
@@ -26,50 +24,70 @@ export function usePosts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPosts = useCallback(async () => {
+  const refreshPosts = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const { data, error: orbisError } = await orbis.getPosts({
+      if (!orbis) {
+        throw new Error('Orbis client not initialized');
+      }
+
+      const result = await orbis.getPosts({
         context: 'youbuidl:post'
       });
 
-      if (orbisError) throw new Error(orbisError.message);
+      if (!result || !result.data) {
+        throw new Error('Invalid response from Orbis');
+      }
+
+      const transformedPosts = result.data.map(post => ({
+        id: post.stream_id,
+        content: post.content?.body || '',
+        author: {
+          id: post.creator,
+          name: post.creator_details?.profile?.username || 
+               post.creator?.slice(0, 6) + '...' + post.creator?.slice(-4),
+          username: post.creator_details?.profile?.username || post.creator,
+          avatar: post.creator_details?.profile?.pfp || 
+                 `https://api.dicebear.com/9.x/bottts/svg?seed=${post.creator}`,
+          verified: false
+        },
+        timestamp: new Date(post.timestamp * 1000).toISOString(),
+        stats: {
+          likes: post.count_likes || 0,
+          comments: post.count_replies || 0,
+          reposts: post.count_haha || 0
+        }
+      }));
       
-      // Sort posts by timestamp, newest first
-      const sortedPosts = [...data].sort((a, b) => 
-        b.timestamp - a.timestamp
+      const sortedPosts = transformedPosts.sort((a, b) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
       
       setPosts(sortedPosts);
     } catch (err) {
       console.error('Error fetching posts:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch posts');
+      setPosts([]); // Reset posts on error
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const getUserPosts = useCallback((did: string) => {
-    return posts.filter(post => post.creator_details.did === did);
-  }, [posts]);
-
-  // Initial fetch
-  useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
-
-  const refreshPosts = useCallback(async () => {
-    await fetchPosts();
-  }, [fetchPosts]);
-
   return {
     posts,
     loading,
     error,
-    refreshPosts,
-    getUserPosts
+    refreshPosts
   };
 }
+
+
+
+
+
+
+
+
 

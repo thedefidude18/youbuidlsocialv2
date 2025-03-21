@@ -10,13 +10,15 @@ interface FeedTabsProps {
   onChange: (value: string) => void;
   forYouCount?: number;
   followingCount?: number;
+  latestCount?: number;
 }
 
 export function FeedTabs({ 
   currentTab, 
   onChange, 
   forYouCount = 0, 
-  followingCount = 0 
+  followingCount = 0,
+  latestCount = 0
 }: FeedTabsProps) {
   const router = useRouter();
 
@@ -28,83 +30,52 @@ export function FeedTabs({
     onChange(value);
   };
 
+  const renderBadge = (count: number) => {
+    if (count <= 0) return null;
+    return (
+      <div className="absolute -top-2 -right-2 min-w-[20px] h-5 px-1 rounded-full bg-primary flex items-center justify-center">
+        <span className="text-[11px] font-medium text-primary-foreground">
+          {count > 99 ? '99+' : count}
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div className="sticky top-14 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <Tabs defaultValue={currentTab} onValueChange={handleTabChange} className="w-full">
-        <div className="max-w-2xl mx-auto"> {/* Add max width and center */}
+      <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
+        <div className="max-w-2xl mx-auto">
           <TabsList className="w-full h-12 bg-transparent p-0 flex justify-center gap-2">
             <TabsTrigger
               value="home"
-              className={cn(
-                "relative flex items-center gap-2 px-6",
-                "data-[state=active]:border-b-2 data-[state=active]:border-primary",
-                "data-[state=active]:text-foreground data-[state=active]:shadow-none",
-                "data-[state=active]:rounded-none rounded-none h-full",
-                "text-sm font-semibold transition-all"
-              )}
+              className="relative flex-1 flex items-center justify-center gap-2 px-6 data-[state=active]:border-b-2 data-[state=active]:border-primary"
             >
-              For you
-              {forYouCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] text-primary-foreground">
-                  {forYouCount > 99 ? '99+' : forYouCount}
-                </span>
-              )}
+              <span className="relative">
+                For you
+                {renderBadge(forYouCount)}
+              </span>
             </TabsTrigger>
             <TabsTrigger
               value="following"
-              className={cn(
-                "relative flex items-center gap-2 px-6",
-                "data-[state=active]:border-b-2 data-[state=active]:border-primary",
-                "data-[state=active]:text-foreground data-[state=active]:shadow-none",
-                "data-[state=active]:rounded-none rounded-none h-full",
-                "text-sm font-semibold transition-all"
-              )}
+              className="relative flex-1 flex items-center justify-center gap-2 px-6 data-[state=active]:border-b-2 data-[state=active]:border-primary"
             >
-              Following
-              {followingCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] text-primary-foreground">
-                  {followingCount > 99 ? '99+' : followingCount}
-                </span>
-              )}
+              <span className="relative">
+                Following
+                {renderBadge(followingCount)}
+              </span>
             </TabsTrigger>
             <TabsTrigger
               value="latest"
-              className={cn(
-                "relative flex items-center gap-2 px-6",
-                "data-[state=active]:border-b-2 data-[state=active]:border-primary",
-                "data-[state=active]:text-foreground data-[state=active]:shadow-none",
-                "data-[state=active]:rounded-none rounded-none h-full",
-                "text-sm font-semibold transition-all"
-              )}
+              className="relative flex-1 flex items-center justify-center gap-2 px-6 data-[state=active]:border-b-2 data-[state=active]:border-primary"
             >
-              Latest
-            </TabsTrigger>
-            <TabsTrigger
-              value="home"
-              className={cn(
-                "relative flex items-center gap-2 px-6",
-                "data-[state=active]:border-b-2 data-[state=active]:border-primary",
-                "data-[state=active]:text-foreground data-[state=active]:shadow-none",
-                "data-[state=active]:rounded-none rounded-none h-full",
-                "text-sm font-semibold transition-all"
-              )}
-            >
-              For you
-              {forYouCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] text-primary-foreground">
-                  {forYouCount > 99 ? '99+' : forYouCount}
-                </span>
-              )}
+              <span className="relative">
+                Latest
+                {renderBadge(latestCount)}
+              </span>
             </TabsTrigger>
             <TabsTrigger
               value="search"
-              className={cn(
-                "relative flex items-center gap-2 px-6",
-                "data-[state=active]:border-b-2 data-[state=active]:border-primary",
-                "data-[state=active]:text-foreground data-[state=active]:shadow-none",
-                "data-[state=active]:rounded-none rounded-none h-full",
-                "text-sm font-semibold transition-all"
-              )}
+              className="relative flex-1 flex items-center justify-center gap-2 px-6 data-[state=active]:border-b-2 data-[state=active]:border-primary"
             >
               <Search className="h-4 w-4" />
             </TabsTrigger>
@@ -114,6 +85,8 @@ export function FeedTabs({
     </div>
   );
 }
+
+
 
 
 

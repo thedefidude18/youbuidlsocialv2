@@ -96,34 +96,25 @@ function HomeLoadingState() {
 }
 function HomePage() {
     var _this = this;
+    // 1. All useState hooks
+    var _a = react_1.useState(false), mounted = _a[0], setMounted = _a[1];
+    var _b = react_1.useState('following'), activeTab = _b[0], setActiveTab = _b[1];
+    var _c = react_1.useState(false), isWithdrawModalOpen = _c[0], setIsWithdrawModalOpen = _c[1];
+    var _d = react_1.useState([]), orbisPosts = _d[0], setOrbisPosts = _d[1];
+    var _e = react_1.useState(""), searchQuery = _e[0], setSearchQuery = _e[1];
+    var _f = react_1.useState([]), searchResults = _f[0], setSearchResults = _f[1];
+    // 2. All context/external hooks
     var router = navigation_1.useRouter();
-    var _a = auth_provider_1.useAuth(), user = _a.user, isAuthenticated = _a.isAuthenticated, isLoading = _a.isLoading;
+    var _g = auth_provider_1.useAuth(), user = _g.user, isAuthenticated = _g.isAuthenticated, isLoading = _g.isLoading;
     var isConnected = wagmi_1.useAccount().isConnected;
-    var _b = points_provider_1.usePoints(), points = _b.points, level = _b.level, levelProgress = _b.levelProgress, nextLevelThreshold = _b.nextLevelThreshold, pointsBreakdown = _b.pointsBreakdown;
-    var _c = use_follow_1.useFollow(), following = _c.following, followers = _c.followers, getFollowingCount = _c.getFollowingCount, getFollowersCount = _c.getFollowersCount;
-    var _d = use_posts_1.usePosts(), posts = _d.posts, postsLoading = _d.loading, refreshPosts = _d.refreshPosts;
-    var _e = use_create_post_1.useCreatePost(), createPost = _e.createPost, isSubmitting = _e.isSubmitting;
-    var _f = react_1.useState(false), mounted = _f[0], setMounted = _f[1];
-    var _g = react_1.useState('following'), activeTab = _g[0], setActiveTab = _g[1];
-    var _h = react_1.useState(false), isWithdrawModalOpen = _h[0], setIsWithdrawModalOpen = _h[1];
-    var _j = react_1.useState([]), orbisPosts = _j[0], setOrbisPosts = _j[1];
-    var _k = react_1.useState(""), searchQuery = _k[0], setSearchQuery = _k[1];
-    var _l = react_1.useState([]), searchResults = _l[0], setSearchResults = _l[1];
-    // Filter out invalid posts
-    var validPosts = (posts === null || posts === void 0 ? void 0 : posts.filter(function (post) {
-        return post &&
-            post.id &&
-            post.likes !== undefined &&
-            typeof post.id === 'string';
-    })) || [];
-    // Handle mounting state
-    react_1.useEffect(function () {
-        setMounted(true);
-    }, []);
-    // Transform Orbis posts to match PostCard interface
-    var transformOrbisPost = function (post) {
+    var _h = points_provider_1.usePoints(), points = _h.points, level = _h.level, levelProgress = _h.levelProgress, nextLevelThreshold = _h.nextLevelThreshold, pointsBreakdown = _h.pointsBreakdown;
+    var _j = use_follow_1.useFollow(), following = _j.following, followers = _j.followers, getFollowingCount = _j.getFollowingCount, getFollowersCount = _j.getFollowersCount;
+    var _k = use_posts_1.usePosts(), posts = _k.posts, postsLoading = _k.loading, refreshPosts = _k.refreshPosts;
+    var _l = use_create_post_1.useCreatePost(), createPost = _l.createPost, isSubmitting = _l.isSubmitting;
+    // 3. All useMemo hooks - must be before any conditional returns
+    var transformOrbisPost = react_1.useMemo(function () { return function (post) {
         var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
-        return {
+        return ({
             id: post.stream_id,
             content: ((_a = post.content) === null || _a === void 0 ? void 0 : _a.body) || '',
             author: {
@@ -141,10 +132,42 @@ function HomePage() {
                 reposts: post.count_hops || 0
             },
             ceramicData: ((_k = post.content) === null || _k === void 0 ? void 0 : _k.data) || null
-        };
-    };
-    // Fetch Orbis posts
+        });
+    }; }, []);
+    var validPosts = react_1.useMemo(function () {
+        return (posts === null || posts === void 0 ? void 0 : posts.filter(function (post) {
+            return post &&
+                post.id &&
+                post.likes !== undefined &&
+                typeof post.id === 'string';
+        })) || [];
+    }, [posts]);
+    var handleSearch = react_1.useMemo(function () { return function (query) {
+        if (!query.trim()) {
+            setSearchResults([]);
+            return;
+        }
+        var normalizedQuery = query.toLowerCase().trim();
+        var matchingPosts = orbisPosts.filter(function (post) {
+            var _a;
+            return ((_a = post.content) === null || _a === void 0 ? void 0 : _a.toLowerCase().includes(normalizedQuery)) ||
+                post.author.name.toLowerCase().includes(normalizedQuery) ||
+                post.author.username.toLowerCase().includes(normalizedQuery);
+        }).slice(0, 5);
+        setSearchResults(matchingPosts);
+    }; }, [orbisPosts]);
+    // 4. All useEffect hooks
     react_1.useEffect(function () {
+        setMounted(true);
+    }, []);
+    react_1.useEffect(function () {
+        if (!mounted)
+            return;
+        refreshPosts();
+    }, [mounted, refreshPosts]);
+    react_1.useEffect(function () {
+        if (!mounted)
+            return;
         var fetchOrbisPosts = function () { return __awaiter(_this, void 0, void 0, function () {
             var _a, data, error, transformedPosts, error_1;
             return __generator(this, function (_b) {
@@ -171,30 +194,13 @@ function HomePage() {
                 }
             });
         }); };
-        if (mounted) {
-            fetchOrbisPosts();
-            refreshPosts();
-        }
-    }, [mounted, refreshPosts]);
-    // Loading state
+        fetchOrbisPosts();
+    }, [mounted, transformOrbisPost]);
+    // 5. Render loading state
     if (!mounted || isLoading) {
         return React.createElement(ProfileLoadingState, null);
     }
-    var handleSearch = function (query) {
-        if (!query.trim()) {
-            setSearchResults([]);
-            return;
-        }
-        var normalizedQuery = query.toLowerCase().trim();
-        // Search in Orbis posts
-        var matchingPosts = orbisPosts.filter(function (post) {
-            var _a;
-            return ((_a = post.content) === null || _a === void 0 ? void 0 : _a.toLowerCase().includes(normalizedQuery)) ||
-                post.author.name.toLowerCase().includes(normalizedQuery) ||
-                post.author.username.toLowerCase().includes(normalizedQuery);
-        }).slice(0, 5);
-        setSearchResults(matchingPosts);
-    };
+    // 6. Main render
     return (React.createElement(main_layout_1.MainLayout, null,
         React.createElement(tabs_1.Tabs, { value: activeTab, onValueChange: setActiveTab, className: "flex-1 flex flex-col" },
             React.createElement("div", { className: "border-b border-border" },

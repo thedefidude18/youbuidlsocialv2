@@ -7,6 +7,26 @@ export const orbis = new Orbis({
     CERAMIC_NODE: "https://node2.orbis.club"
 });
 
+export interface OrbisPost {
+    stream_id: string;
+    content: {
+        body: string;
+    };
+    creator: string;
+    creator_details: {
+        did: string;
+        profile?: {
+            username: string;
+            pfp: string;
+            verified?: boolean;
+        };
+    };
+    timestamp: number;
+    count_likes: number;
+    count_replies: number;
+    count_haha: number;
+}
+
 export async function connectOrbis() {
     const res = await orbis.connect_v2({
         provider: window.ethereum,
@@ -38,15 +58,22 @@ export async function createPost(content: string, hashtags: string[] = []) {
 }
 
 export async function getPosts() {
-    const { data, error } = await orbis.getPosts({
-        context: 'youbuidl:post'
-    });
-    
-    if (error) {
+    try {
+        const { data, error } = await orbis.getPosts({
+            context: 'youbuidl:post'
+        });
+        
+        if (error) {
+            throw error;
+        }
+
+        console.log('Raw Orbis posts:', data); // Debug log
+        
+        return data;
+    } catch (error) {
+        console.error('Error in getPosts:', error);
         throw error;
     }
-    
-    return data;
 }
 
 export async function likePost(postId: string) {
@@ -73,5 +100,9 @@ export async function commentOnPost(postId: string, content: string) {
         master: postId, // This links the comment to the original post
     });
 }
+
+
+
+
 
 

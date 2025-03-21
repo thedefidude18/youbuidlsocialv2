@@ -271,6 +271,20 @@ function PostCard(_a) {
             }
         });
     }); };
+    var renderImage = function (ipfsHash) {
+        if (!ipfsHash)
+            return null;
+        var imageUrl = "https://gateway.pinata.cloud/ipfs/" + ipfsHash;
+        return (React.createElement("div", { className: "mt-2 relative group" },
+            React.createElement("img", { src: imageUrl, alt: "Post attachment", className: "rounded-lg max-h-[500px] w-full object-cover", loading: "lazy", onError: function (e) {
+                    // Fallback if Pinata gateway fails
+                    var img = e.target;
+                    if (!img.src.includes('ipfs.io')) {
+                        img.src = "https://ipfs.io/ipfs/" + ipfsHash;
+                    }
+                } }),
+            React.createElement("div", { className: "absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors rounded-lg" })));
+    };
     return (React.createElement(card_1.Card, { className: "bg-white dark:bg-zinc-900 shadow-sm rounded-xl overflow-hidden mb-4" },
         React.createElement("div", { className: "p-4" },
             React.createElement("div", { className: "flex items-start justify-between" },

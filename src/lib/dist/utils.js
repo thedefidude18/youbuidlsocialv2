@@ -1,6 +1,6 @@
 "use strict";
 exports.__esModule = true;
-exports.isCeramicStream = exports.isOptimismTransaction = exports.getOptimismVerificationUrl = exports.cn = void 0;
+exports.formatAddress = exports.isCeramicStream = exports.isOptimismTransaction = exports.getOptimismVerificationUrl = exports.cn = void 0;
 var clsx_1 = require("clsx");
 var tailwind_merge_1 = require("tailwind-merge");
 function cn() {
@@ -31,3 +31,9 @@ function isCeramicStream(hash) {
     return hash.startsWith('kjzl6');
 }
 exports.isCeramicStream = isCeramicStream;
+function formatAddress(address) {
+    if (!address)
+        return '';
+    return address.slice(0, 4) + "..." + address.slice(-4);
+}
+exports.formatAddress = formatAddress;

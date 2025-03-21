@@ -23,6 +23,7 @@ import { formatEther } from 'viem';
 import { usePosts } from '@/hooks/use-posts';
 import { Skeleton } from "@/components/ui/skeleton";
 import { use } from 'react';
+import { WithdrawDonations } from '@/components/WithdrawDonations';
 
 // Add interface for post type
 interface Post {
@@ -75,10 +76,10 @@ export default function ProfilePage({ params }: { params: { address: string } })
   }, []);
 
   useEffect(() => {
-    if (address && mounted) {
-      getUserPosts(address);
+    if (mounted && address) {
+      getUserPosts(address); // This will now fetch only the user's posts
     }
-  }, [address, mounted, getUserPosts]);
+  }, [mounted, address, getUserPosts]);
 
   // 4. Derived values/functions
   const isOwnProfile = currentUserAddress && address 
@@ -303,6 +304,8 @@ function ProfileLoadingState() {
     </MainLayout>
   );
 }
+
+
 
 
 

@@ -38,35 +38,66 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 exports.__esModule = true;
 exports.useCreatePost = void 0;
 var react_1 = require("react");
-var use_toast_1 = require("@/hooks/use-toast");
 var wagmi_1 = require("wagmi");
-var posts_store_1 = require("@/store/posts-store");
+var use_toast_1 = require("@/hooks/use-toast");
 var orbis_1 = require("@/lib/orbis");
+var posts_store_1 = require("@/store/posts-store");
+var ipfs_service_1 = require("@/services/ipfs-service");
 function useCreatePost() {
     var _this = this;
-    var _a = react_1.useState(false), isSubmitting = _a[0], setIsSubmitting = _a[1];
     var address = wagmi_1.useAccount().address;
     var addPost = posts_store_1.usePostsStore().addPost;
     var toast = use_toast_1.useToast().toast;
-    var createPost = function (content) { return __awaiter(_this, void 0, void 0, function () {
-        var orbisResult, newPost, error_1;
+    var _a = react_1.useState(false), isSubmitting = _a[0], setIsSubmitting = _a[1];
+    var ipfsService = new ipfs_service_1.IPFSService();
+    var createPost = function (content, image) { return __awaiter(_this, void 0, void 0, function () {
+        var imageHash, error_1, hashtags, postData, postHash, orbisResult, newPost, error_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     if (!address) {
                         toast({
                             title: "Error",
-                            description: "Please connect your wallet",
+                            description: "Please connect your wallet first",
                             variant: "destructive"
                         });
                         return [2 /*return*/, false];
                     }
                     _a.label = 1;
                 case 1:
-                    _a.trys.push([1, 3, 4, 5]);
+                    _a.trys.push([1, 8, 9, 10]);
                     setIsSubmitting(true);
-                    return [4 /*yield*/, orbis_1.createPost(content)];
+                    imageHash = null;
+                    if (!image) return [3 /*break*/, 5];
+                    _a.label = 2;
                 case 2:
+                    _a.trys.push([2, 4, , 5]);
+                    return [4 /*yield*/, ipfsService.uploadImage(image)];
+                case 3:
+                    imageHash = _a.sent();
+                    return [3 /*break*/, 5];
+                case 4:
+                    error_1 = _a.sent();
+                    console.error('Error uploading image:', error_1);
+                    toast({
+                        title: "Error",
+                        description: "Failed to upload image",
+                        variant: "destructive"
+                    });
+                    return [2 /*return*/, false];
+                case 5:
+                    hashtags = content.match(/#[\w]+/g) || [];
+                    postData = {
+                        content: content,
+                        images: imageHash ? [imageHash] : [],
+                        timestamp: new Date().toISOString(),
+                        hashtags: hashtags.map(function (tag) { return tag.substring(1); }) // Remove # from tags
+                    };
+                    return [4 /*yield*/, ipfsService.uploadPost(postData)];
+                case 6:
+                    postHash = _a.sent();
+                    return [4 /*yield*/, orbis_1.createPost(content, hashtags, postHash)];
+                case 7:
                     orbisResult = _a.sent();
                     if (!orbisResult || orbisResult.status !== 200) {
                         throw new Error((orbisResult === null || orbisResult === void 0 ? void 0 : orbisResult.error) || 'Failed to create post on Orbis');
@@ -74,6 +105,7 @@ function useCreatePost() {
                     newPost = {
                         id: orbisResult.doc,
                         content: content,
+                        images: imageHash ? [imageHash] : [],
                         author: {
                             id: address.toLowerCase(),
                             name: address.slice(0, 6) + '...' + address.slice(-4),
@@ -102,19 +134,19 @@ function useCreatePost() {
                         description: "Post created successfully"
                     });
                     return [2 /*return*/, true];
-                case 3:
-                    error_1 = _a.sent();
-                    console.error('Error creating post:', error_1);
+                case 8:
+                    error_2 = _a.sent();
+                    console.error('Error creating post:', error_2);
                     toast({
                         title: "Error",
-                        description: error_1 instanceof Error ? error_1.message : "Failed to create post",
+                        description: error_2 instanceof Error ? error_2.message : "Failed to create post",
                         variant: "destructive"
                     });
                     return [2 /*return*/, false];
-                case 4:
+                case 9:
                     setIsSubmitting(false);
                     return [7 /*endfinally*/];
-                case 5: return [2 /*return*/];
+                case 10: return [2 /*return*/];
             }
         });
     }); };

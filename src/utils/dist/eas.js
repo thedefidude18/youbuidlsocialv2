@@ -36,23 +36,54 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 exports.__esModule = true;
-exports.getEASAttestation = void 0;
+exports.getEASAttestation = exports.getEAS = exports.initializeEAS = void 0;
 var EAS_1 = require("../contracts/EAS");
 var ethers_1 = require("ethers");
-var eas;
-if (typeof window !== 'undefined' && window.ethereum) {
-    var provider = new ethers_1.ethers.BrowserProvider(window.ethereum);
-    provider.getSigner().then(function (signer) {
-        eas = new EAS_1.EAS(signer);
+var wallet_1 = require("./wallet");
+var eas = null;
+exports.initializeEAS = function () { return __awaiter(void 0, void 0, void 0, function () {
+    var ethereumProvider, provider, signer, provider, error_1, provider;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 4, , 5]);
+                ethereumProvider = wallet_1.getEthereumProvider();
+                if (!ethereumProvider) return [3 /*break*/, 2];
+                provider = new ethers_1.ethers.BrowserProvider(ethereumProvider);
+                return [4 /*yield*/, provider.getSigner()];
+            case 1:
+                signer = _a.sent();
+                eas = new EAS_1.EAS(signer);
+                return [3 /*break*/, 3];
+            case 2:
+                provider = new ethers_1.ethers.JsonRpcProvider("https://sepolia.optimism.io");
+                eas = new EAS_1.EAS(provider);
+                _a.label = 3;
+            case 3: return [2 /*return*/, eas];
+            case 4:
+                error_1 = _a.sent();
+                console.error('Error initializing EAS:', error_1);
+                provider = new ethers_1.ethers.JsonRpcProvider("https://sepolia.optimism.io");
+                eas = new EAS_1.EAS(provider);
+                return [2 /*return*/, eas];
+            case 5: return [2 /*return*/];
+        }
     });
-}
-else {
-    var provider = new ethers_1.ethers.JsonRpcProvider("https://sepolia.optimism.io");
-    eas = new EAS_1.EAS(provider);
-}
+}); };
+exports.getEAS = function () { return __awaiter(void 0, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                if (!!eas) return [3 /*break*/, 2];
+                return [4 /*yield*/, exports.initializeEAS()];
+            case 1: return [2 /*return*/, _a.sent()];
+            case 2: return [2 /*return*/, eas];
+        }
+    });
+}); };
 function getEASAttestation(attestationUID) {
     return __awaiter(this, void 0, void 0, function () {
-        var attestation, error_1;
+        var attestation, error_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -72,9 +103,9 @@ function getEASAttestation(attestationUID) {
                             expirationTime: attestation.expirationTime.toString()
                         }];
                 case 2:
-                    error_1 = _a.sent();
-                    console.error('Error fetching attestation from EAS:', error_1);
-                    throw error_1;
+                    error_2 = _a.sent();
+                    console.error('Error fetching attestation from EAS:', error_2);
+                    throw error_2;
                 case 3: return [2 /*return*/];
             }
         });

@@ -35,13 +35,6 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
-};
 exports.__esModule = true;
 exports.usePosts = void 0;
 var react_1 = require("react");
@@ -51,30 +44,57 @@ function usePosts() {
     var _a = react_1.useState([]), posts = _a[0], setPosts = _a[1];
     var _b = react_1.useState(true), loading = _b[0], setLoading = _b[1];
     var _c = react_1.useState(null), error = _c[0], setError = _c[1];
-    var fetchPosts = react_1.useCallback(function () { return __awaiter(_this, void 0, void 0, function () {
-        var _a, data, orbisError, sortedPosts, err_1;
-        return __generator(this, function (_b) {
-            switch (_b.label) {
+    var refreshPosts = react_1.useCallback(function () { return __awaiter(_this, void 0, void 0, function () {
+        var result, transformedPosts, sortedPosts, err_1;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
                 case 0:
-                    _b.trys.push([0, 2, 3, 4]);
+                    _a.trys.push([0, 2, 3, 4]);
                     setLoading(true);
                     setError(null);
+                    if (!orbis_1.orbis) {
+                        throw new Error('Orbis client not initialized');
+                    }
                     return [4 /*yield*/, orbis_1.orbis.getPosts({
                             context: 'youbuidl:post'
                         })];
                 case 1:
-                    _a = _b.sent(), data = _a.data, orbisError = _a.error;
-                    if (orbisError)
-                        throw new Error(orbisError.message);
-                    sortedPosts = __spreadArrays(data).sort(function (a, b) {
-                        return b.timestamp - a.timestamp;
+                    result = _a.sent();
+                    if (!result || !result.data) {
+                        throw new Error('Invalid response from Orbis');
+                    }
+                    transformedPosts = result.data.map(function (post) {
+                        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+                        return ({
+                            id: post.stream_id,
+                            content: ((_a = post.content) === null || _a === void 0 ? void 0 : _a.body) || '',
+                            author: {
+                                id: post.creator,
+                                name: ((_c = (_b = post.creator_details) === null || _b === void 0 ? void 0 : _b.profile) === null || _c === void 0 ? void 0 : _c.username) ||
+                                    ((_d = post.creator) === null || _d === void 0 ? void 0 : _d.slice(0, 6)) + '...' + ((_e = post.creator) === null || _e === void 0 ? void 0 : _e.slice(-4)),
+                                username: ((_g = (_f = post.creator_details) === null || _f === void 0 ? void 0 : _f.profile) === null || _g === void 0 ? void 0 : _g.username) || post.creator,
+                                avatar: ((_j = (_h = post.creator_details) === null || _h === void 0 ? void 0 : _h.profile) === null || _j === void 0 ? void 0 : _j.pfp) ||
+                                    "https://api.dicebear.com/9.x/bottts/svg?seed=" + post.creator,
+                                verified: false
+                            },
+                            timestamp: new Date(post.timestamp * 1000).toISOString(),
+                            stats: {
+                                likes: post.count_likes || 0,
+                                comments: post.count_replies || 0,
+                                reposts: post.count_haha || 0
+                            }
+                        });
+                    });
+                    sortedPosts = transformedPosts.sort(function (a, b) {
+                        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
                     });
                     setPosts(sortedPosts);
                     return [3 /*break*/, 4];
                 case 2:
-                    err_1 = _b.sent();
+                    err_1 = _a.sent();
                     console.error('Error fetching posts:', err_1);
                     setError(err_1 instanceof Error ? err_1.message : 'Failed to fetch posts');
+                    setPosts([]); // Reset posts on error
                     return [3 /*break*/, 4];
                 case 3:
                     setLoading(false);
@@ -83,29 +103,11 @@ function usePosts() {
             }
         });
     }); }, []);
-    var getUserPosts = react_1.useCallback(function (did) {
-        return posts.filter(function (post) { return post.creator_details.did === did; });
-    }, [posts]);
-    // Initial fetch
-    react_1.useEffect(function () {
-        fetchPosts();
-    }, [fetchPosts]);
-    var refreshPosts = react_1.useCallback(function () { return __awaiter(_this, void 0, void 0, function () {
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0: return [4 /*yield*/, fetchPosts()];
-                case 1:
-                    _a.sent();
-                    return [2 /*return*/];
-            }
-        });
-    }); }, [fetchPosts]);
     return {
         posts: posts,
         loading: loading,
         error: error,
-        refreshPosts: refreshPosts,
-        getUserPosts: getUserPosts
+        refreshPosts: refreshPosts
     };
 }
 exports.usePosts = usePosts;

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { orbis } from "@/lib/orbis";
 import type { NotificationItem } from '@/types/notification';
+import { getEthereumProvider } from "@/utils/wallet";
 
 interface NotificationItem {
   id: string;
@@ -49,82 +50,82 @@ const NotificationContext = createContext<NotificationContextType>({
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const fetchNotifications = async () => {
+  const initializeOrbis = async () => {
     try {
-      // Check if orbis is initialized
       if (!orbis) {
         throw new Error("Orbis not initialized");
       }
 
-      // Modified connection check and initialization
-      let isConnected = false;
-      try {
-        const connectionStatus = await orbis.isConnected();
-        isConnected = connectionStatus.status;
-      } catch (error) {
-        console.error("Connection check failed:", error);
+      const provider = getEthereumProvider();
+      if (!provider) {
+        throw new Error("No Ethereum provider available");
       }
 
-      if (!isConnected) {
-        const res = await orbis.connect_v2();
-        if (!res?.status) {
-          throw new Error("Failed to connect to Orbis");
-        }
+      const res = await orbis.connect_v2({
+        provider: provider,
+        chain: 'ethereum'
+      });
+
+      if (!res?.status) {
+        throw new Error("Failed to connect to Orbis");
+      }
+      
+      setIsInitialized(true);
+      return true;
+    } catch (error) {
+      console.error("Failed to initialize Orbis:", error);
+      return false;
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      if (!isInitialized) {
+        const initialized = await initializeOrbis();
+        if (!initialized) return [];
       }
 
-      // Get user notifications from Orbis
       const result = await orbis.getNotifications();
       
-      // Properly handle the response
-      if (!result) {
-        throw new Error("No response from notifications service");
+      if (!result || !result.data) {
+        throw new Error("Failed to fetch notifications");
       }
 
-      // Check if we have data and it's an array
+      // Process notifications
       const notificationsData = Array.isArray(result.data) ? result.data : [];
-      
-      const formattedNotifications: NotificationItem[] = notificationsData.map((notification: any) => {
-        let type: NotificationItem["type"] = "system";
+      const formattedNotifications = notificationsData.map(notification => {
+        let type = notification.type || "system";
         let content = "";
-        let postContent = "";
+        let postContent = notification.post_content;
 
-        // Determine notification type and content based on Orbis notification
-        switch (notification.type) {
-          case "follow":
-            type = "follow";
-            content = "followed you";
-            break;
-          case "reaction":
-            type = "like";
-            content = "liked your cast";
-            postContent = notification.post_content;
-            break;
+        switch (type) {
           case "mention":
-            type = "mention";
             content = "mentioned you";
-            postContent = notification.post_content;
             break;
-          case "reply":
-            type = "reply";
-            content = "replied to your cast";
-            postContent = notification.post_content;
+          case "like":
+            content = "liked your post";
             break;
           case "recast":
-            type = "recast";
             content = "recasted your post";
-            postContent = notification.post_content;
+            break;
+          case "follow":
+            content = "followed you";
+            break;
+          case "reply":
+            content = "replied to your post";
+            break;
+          case "channel":
+            content = `invited you to channel ${notification.channelName}`;
             break;
           case "donation":
-            type = "donation";
-            content = `donated ${notification.amount?.value} ${notification.amount?.currency}`;
+            content = `sent you ${notification.amount?.value} ${notification.amount?.currency}`;
             break;
           case "points":
-            type = "points";
             content = `awarded you ${notification.amount?.value} points`;
             break;
           case "withdrawal":
-            type = "withdrawal";
             content = `${notification.status === "completed" ? "Completed" : "Processing"} withdrawal of ${notification.amount?.value} ${notification.amount?.currency}`;
             break;
         }
@@ -140,39 +141,35 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           },
           content,
           postContent,
-          time: new Date(notification.timestamp).toRelativeTimeString(),
+          time: new Date(notification.timestamp).toLocaleString(),
           isNew: !notification.read,
         };
       });
 
       setNotifications(formattedNotifications);
+      return formattedNotifications;
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
-      // Don't throw here - we want to handle the error gracefully
-      return []; // Return empty array on error
+      return [];
     }
   };
 
   useEffect(() => {
     if (!mounted) {
       setMounted(true);
-      // Use a more reliable initialization approach
-      const initializeNotifications = async () => {
-        try {
-          await fetchNotifications();
-        } catch (error) {
-          console.error("Failed to initialize notifications:", error);
-        }
-      };
-      
-      initializeNotifications();
+      initializeOrbis().then(() => {
+        fetchNotifications();
+      });
     }
 
-    // Set up polling for new notifications
-    const pollInterval = setInterval(fetchNotifications, 30000); // Poll every 30 seconds
+    const pollInterval = setInterval(() => {
+      if (isInitialized) {
+        fetchNotifications();
+      }
+    }, 30000);
 
     return () => clearInterval(pollInterval);
-  }, [mounted]);
+  }, [mounted, isInitialized]);
 
   const unreadCount = notifications.filter(n => n.isNew).length;
 
@@ -182,6 +179,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const markAsRead = async (id: string) => {
     try {
+      if (!isInitialized) {
+        await initializeOrbis();
+      }
+      
       const result = await orbis.markNotificationAsRead(id);
       if (!result?.status) {
         throw new Error("Failed to mark notification as read");
@@ -201,6 +202,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const markAllAsRead = async () => {
     try {
+      if (!isInitialized) {
+        await initializeOrbis();
+      }
+      
       const result = await orbis.markAllNotificationsAsRead();
       if (!result?.status) {
         throw new Error("Failed to mark all notifications as read");
@@ -239,6 +244,9 @@ export function useNotifications() {
   const context = useContext(NotificationContext);
   return context;
 }
+
+
+
 
 
 

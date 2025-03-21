@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ProfileEditForm } from '@/components/profile-edit-form';
 import { WithdrawModal } from '@/components/WithdrawModal';
 import { usePosts } from '@/hooks/use-posts';
+import { WithdrawDonations } from '@/components/WithdrawDonations';
 
 // ProfileLoadingState component
 function ProfileLoadingState() {
@@ -82,7 +83,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (mounted && address) {
-      getUserPosts(address);
+      getUserPosts(address); // This will now fetch only the current user's posts
     }
   }, [mounted, address, getUserPosts]);
 
@@ -128,9 +129,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex gap-2 mb-6">
-              <Button onClick={() => setIsWithdrawModalOpen(true)}>
-                Withdraw Points
-              </Button>
+              {address && <WithdrawDonations />}
               <ProfileEditForm user={user} />
             </div>
           </div>
@@ -185,5 +184,7 @@ export default function ProfilePage() {
     </MainLayout>
   );
 }
+
+
 
 

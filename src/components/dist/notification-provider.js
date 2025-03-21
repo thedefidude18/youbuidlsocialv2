@@ -58,6 +58,7 @@ exports.__esModule = true;
 exports.useNotifications = exports.NotificationProvider = void 0;
 var react_1 = require("react");
 var orbis_1 = require("@/lib/orbis");
+var wallet_1 = require("@/utils/wallet");
 var NotificationContext = react_1.createContext({
     notifications: [],
     unreadCount: 0,
@@ -74,87 +75,90 @@ function NotificationProvider(_a) {
     var children = _a.children;
     var _b = react_1.useState(false), mounted = _b[0], setMounted = _b[1];
     var _c = react_1.useState([]), notifications = _c[0], setNotifications = _c[1];
-    var fetchNotifications = function () { return __awaiter(_this, void 0, void 0, function () {
-        var isConnected, connectionStatus, error_1, res, result, notificationsData, formattedNotifications, error_2;
+    var _d = react_1.useState(false), isInitialized = _d[0], setIsInitialized = _d[1];
+    var initializeOrbis = function () { return __awaiter(_this, void 0, void 0, function () {
+        var provider, res, error_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, 8, , 9]);
-                    // Check if orbis is initialized
+                    _a.trys.push([0, 2, , 3]);
                     if (!orbis_1.orbis) {
                         throw new Error("Orbis not initialized");
                     }
-                    isConnected = false;
-                    _a.label = 1;
+                    provider = wallet_1.getEthereumProvider();
+                    if (!provider) {
+                        throw new Error("No Ethereum provider available");
+                    }
+                    return [4 /*yield*/, orbis_1.orbis.connect_v2({
+                            provider: provider,
+                            chain: 'ethereum'
+                        })];
                 case 1:
-                    _a.trys.push([1, 3, , 4]);
-                    return [4 /*yield*/, orbis_1.orbis.isConnected()];
-                case 2:
-                    connectionStatus = _a.sent();
-                    isConnected = connectionStatus.status;
-                    return [3 /*break*/, 4];
-                case 3:
-                    error_1 = _a.sent();
-                    console.error("Connection check failed:", error_1);
-                    return [3 /*break*/, 4];
-                case 4:
-                    if (!!isConnected) return [3 /*break*/, 6];
-                    return [4 /*yield*/, orbis_1.orbis.connect_v2()];
-                case 5:
                     res = _a.sent();
                     if (!(res === null || res === void 0 ? void 0 : res.status)) {
                         throw new Error("Failed to connect to Orbis");
                     }
-                    _a.label = 6;
-                case 6: return [4 /*yield*/, orbis_1.orbis.getNotifications()];
-                case 7:
+                    setIsInitialized(true);
+                    return [2 /*return*/, true];
+                case 2:
+                    error_1 = _a.sent();
+                    console.error("Failed to initialize Orbis:", error_1);
+                    return [2 /*return*/, false];
+                case 3: return [2 /*return*/];
+            }
+        });
+    }); };
+    var fetchNotifications = function () { return __awaiter(_this, void 0, void 0, function () {
+        var initialized, result, notificationsData, formattedNotifications, error_2;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    _a.trys.push([0, 4, , 5]);
+                    if (!!isInitialized) return [3 /*break*/, 2];
+                    return [4 /*yield*/, initializeOrbis()];
+                case 1:
+                    initialized = _a.sent();
+                    if (!initialized)
+                        return [2 /*return*/, []];
+                    _a.label = 2;
+                case 2: return [4 /*yield*/, orbis_1.orbis.getNotifications()];
+                case 3:
                     result = _a.sent();
-                    // Properly handle the response
-                    if (!result) {
-                        throw new Error("No response from notifications service");
+                    if (!result || !result.data) {
+                        throw new Error("Failed to fetch notifications");
                     }
                     notificationsData = Array.isArray(result.data) ? result.data : [];
                     formattedNotifications = notificationsData.map(function (notification) {
                         var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
-                        var type = "system";
+                        var type = notification.type || "system";
                         var content = "";
-                        var postContent = "";
-                        // Determine notification type and content based on Orbis notification
-                        switch (notification.type) {
-                            case "follow":
-                                type = "follow";
-                                content = "followed you";
-                                break;
-                            case "reaction":
-                                type = "like";
-                                content = "liked your cast";
-                                postContent = notification.post_content;
-                                break;
+                        var postContent = notification.post_content;
+                        switch (type) {
                             case "mention":
-                                type = "mention";
                                 content = "mentioned you";
-                                postContent = notification.post_content;
                                 break;
-                            case "reply":
-                                type = "reply";
-                                content = "replied to your cast";
-                                postContent = notification.post_content;
+                            case "like":
+                                content = "liked your post";
                                 break;
                             case "recast":
-                                type = "recast";
                                 content = "recasted your post";
-                                postContent = notification.post_content;
+                                break;
+                            case "follow":
+                                content = "followed you";
+                                break;
+                            case "reply":
+                                content = "replied to your post";
+                                break;
+                            case "channel":
+                                content = "invited you to channel " + notification.channelName;
                                 break;
                             case "donation":
-                                type = "donation";
-                                content = "donated " + ((_a = notification.amount) === null || _a === void 0 ? void 0 : _a.value) + " " + ((_b = notification.amount) === null || _b === void 0 ? void 0 : _b.currency);
+                                content = "sent you " + ((_a = notification.amount) === null || _a === void 0 ? void 0 : _a.value) + " " + ((_b = notification.amount) === null || _b === void 0 ? void 0 : _b.currency);
                                 break;
                             case "points":
-                                type = "points";
                                 content = "awarded you " + ((_c = notification.amount) === null || _c === void 0 ? void 0 : _c.value) + " points";
                                 break;
                             case "withdrawal":
-                                type = "withdrawal";
                                 content = (notification.status === "completed" ? "Completed" : "Processing") + " withdrawal of " + ((_d = notification.amount) === null || _d === void 0 ? void 0 : _d.value) + " " + ((_e = notification.amount) === null || _e === void 0 ? void 0 : _e.currency);
                                 break;
                         }
@@ -169,61 +173,51 @@ function NotificationProvider(_a) {
                             },
                             content: content,
                             postContent: postContent,
-                            time: new Date(notification.timestamp).toRelativeTimeString(),
+                            time: new Date(notification.timestamp).toLocaleString(),
                             isNew: !notification.read
                         };
                     });
                     setNotifications(formattedNotifications);
-                    return [3 /*break*/, 9];
-                case 8:
+                    return [2 /*return*/, formattedNotifications];
+                case 4:
                     error_2 = _a.sent();
                     console.error("Failed to fetch notifications:", error_2);
-                    // Don't throw here - we want to handle the error gracefully
-                    return [2 /*return*/, []]; // Return empty array on error
-                case 9: return [2 /*return*/];
+                    return [2 /*return*/, []];
+                case 5: return [2 /*return*/];
             }
         });
     }); };
     react_1.useEffect(function () {
         if (!mounted) {
             setMounted(true);
-            // Use a more reliable initialization approach
-            var initializeNotifications = function () { return __awaiter(_this, void 0, void 0, function () {
-                var error_3;
-                return __generator(this, function (_a) {
-                    switch (_a.label) {
-                        case 0:
-                            _a.trys.push([0, 2, , 3]);
-                            return [4 /*yield*/, fetchNotifications()];
-                        case 1:
-                            _a.sent();
-                            return [3 /*break*/, 3];
-                        case 2:
-                            error_3 = _a.sent();
-                            console.error("Failed to initialize notifications:", error_3);
-                            return [3 /*break*/, 3];
-                        case 3: return [2 /*return*/];
-                    }
-                });
-            }); };
-            initializeNotifications();
+            initializeOrbis().then(function () {
+                fetchNotifications();
+            });
         }
-        // Set up polling for new notifications
-        var pollInterval = setInterval(fetchNotifications, 30000); // Poll every 30 seconds
+        var pollInterval = setInterval(function () {
+            if (isInitialized) {
+                fetchNotifications();
+            }
+        }, 30000);
         return function () { return clearInterval(pollInterval); };
-    }, [mounted]);
+    }, [mounted, isInitialized]);
     var unreadCount = notifications.filter(function (n) { return n.isNew; }).length;
     var addNotification = function (notification) {
         setNotifications(function (prev) { return __spreadArrays([notification], prev); });
     };
     var markAsRead = function (id) { return __awaiter(_this, void 0, void 0, function () {
-        var result, error_4;
+        var result, error_3;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, 2, , 3]);
-                    return [4 /*yield*/, orbis_1.orbis.markNotificationAsRead(id)];
+                    _a.trys.push([0, 4, , 5]);
+                    if (!!isInitialized) return [3 /*break*/, 2];
+                    return [4 /*yield*/, initializeOrbis()];
                 case 1:
+                    _a.sent();
+                    _a.label = 2;
+                case 2: return [4 /*yield*/, orbis_1.orbis.markNotificationAsRead(id)];
+                case 3:
                     result = _a.sent();
                     if (!(result === null || result === void 0 ? void 0 : result.status)) {
                         throw new Error("Failed to mark notification as read");
@@ -234,23 +228,28 @@ function NotificationProvider(_a) {
                                 ? __assign(__assign({}, notification), { isNew: false }) : notification;
                         });
                     });
-                    return [3 /*break*/, 3];
-                case 2:
-                    error_4 = _a.sent();
-                    console.error("Failed to mark notification as read:", error_4);
-                    return [3 /*break*/, 3];
-                case 3: return [2 /*return*/];
+                    return [3 /*break*/, 5];
+                case 4:
+                    error_3 = _a.sent();
+                    console.error("Failed to mark notification as read:", error_3);
+                    return [3 /*break*/, 5];
+                case 5: return [2 /*return*/];
             }
         });
     }); };
     var markAllAsRead = function () { return __awaiter(_this, void 0, void 0, function () {
-        var result, error_5;
+        var result, error_4;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, 2, , 3]);
-                    return [4 /*yield*/, orbis_1.orbis.markAllNotificationsAsRead()];
+                    _a.trys.push([0, 4, , 5]);
+                    if (!!isInitialized) return [3 /*break*/, 2];
+                    return [4 /*yield*/, initializeOrbis()];
                 case 1:
+                    _a.sent();
+                    _a.label = 2;
+                case 2: return [4 /*yield*/, orbis_1.orbis.markAllNotificationsAsRead()];
+                case 3:
                     result = _a.sent();
                     if (!(result === null || result === void 0 ? void 0 : result.status)) {
                         throw new Error("Failed to mark all notifications as read");
@@ -258,12 +257,12 @@ function NotificationProvider(_a) {
                     setNotifications(function (prev) {
                         return prev.map(function (notification) { return (__assign(__assign({}, notification), { isNew: false })); });
                     });
-                    return [3 /*break*/, 3];
-                case 2:
-                    error_5 = _a.sent();
-                    console.error("Failed to mark all notifications as read:", error_5);
-                    return [3 /*break*/, 3];
-                case 3: return [2 /*return*/];
+                    return [3 /*break*/, 5];
+                case 4:
+                    error_4 = _a.sent();
+                    console.error("Failed to mark all notifications as read:", error_4);
+                    return [3 /*break*/, 5];
+                case 5: return [2 /*return*/];
             }
         });
     }); };

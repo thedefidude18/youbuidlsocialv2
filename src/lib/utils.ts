@@ -1,4 +1,4 @@
-import { ClassValue, clsx } from "clsx";
+import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -26,3 +26,10 @@ export function isOptimismTransaction(hash: string): boolean {
 export function isCeramicStream(hash: string): boolean {
   return hash.startsWith('kjzl6');
 }
+
+export function formatAddress(address: string): string {
+  if (!address) return '';
+  return `${address.slice(0, 4)}...${address.slice(-4)}`;
+}
+
+

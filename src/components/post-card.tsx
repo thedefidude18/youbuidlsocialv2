@@ -226,6 +226,31 @@ export function PostCard({ post }: PostCardProps) {
     }
   };
 
+  const renderImage = (ipfsHash: string) => {
+    if (!ipfsHash) return null;
+    
+    const imageUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
+    
+    return (
+      <div className="mt-2 relative group">
+        <img
+          src={imageUrl}
+          alt="Post attachment"
+          className="rounded-lg max-h-[500px] w-full object-cover"
+          loading="lazy"
+          onError={(e) => {
+            // Fallback if Pinata gateway fails
+            const img = e.target as HTMLImageElement;
+            if (!img.src.includes('ipfs.io')) {
+              img.src = `https://ipfs.io/ipfs/${ipfsHash}`;
+            }
+          }}
+        />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors rounded-lg" />
+      </div>
+    );
+  };
+
   return (
     <Card className="bg-white dark:bg-zinc-900 shadow-sm rounded-xl overflow-hidden mb-4">
       {/* Post Header */}
@@ -478,6 +503,7 @@ export function PointsLeaderboard() {
     </div>
   );
 }
+
 
 
 

@@ -90,18 +90,26 @@ function createPost(content, hashtags) {
 exports.createPost = createPost;
 function getPosts() {
     return __awaiter(this, void 0, void 0, function () {
-        var _a, data, error;
+        var _a, data, error, error_1;
         return __generator(this, function (_b) {
             switch (_b.label) {
-                case 0: return [4 /*yield*/, exports.orbis.getPosts({
-                        context: 'youbuidl:post'
-                    })];
+                case 0:
+                    _b.trys.push([0, 2, , 3]);
+                    return [4 /*yield*/, exports.orbis.getPosts({
+                            context: 'youbuidl:post'
+                        })];
                 case 1:
                     _a = _b.sent(), data = _a.data, error = _a.error;
                     if (error) {
                         throw error;
                     }
+                    console.log('Raw Orbis posts:', data); // Debug log
                     return [2 /*return*/, data];
+                case 2:
+                    error_1 = _b.sent();
+                    console.error('Error in getPosts:', error_1);
+                    throw error_1;
+                case 3: return [2 /*return*/];
             }
         });
     });

@@ -42,9 +42,11 @@ export function MainLayout({ children, showHeader = true }: MainLayoutProps) {
           </main>
 
           {/* Right Sidebar */}
-          <div className="hidden lg:block w-64 xl:w-72 shrink-0">
-            <div className={`fixed ${showHeader ? 'top-16' : 'top-0'} bottom-0 w-64 xl:w-72 overflow-y-auto border-l border-border py-8 px-4`}>
-              <RightSidebar />
+          <div className="hidden lg:block w-[320px] xl:w-[380px] shrink-0">
+            <div className={`fixed ${showHeader ? 'top-16' : 'top-0'} bottom-0 w-[320px] xl:w-[380px] overflow-y-auto hide-scrollbar border-l border-border bg-background`}>
+              <div className="pb-16">
+                <RightSidebar />
+              </div>
             </div>
           </div>
         </div>
@@ -52,6 +54,10 @@ export function MainLayout({ children, showHeader = true }: MainLayoutProps) {
     </TooltipProvider>
   );
 }
+
+
+
+
 
 
 

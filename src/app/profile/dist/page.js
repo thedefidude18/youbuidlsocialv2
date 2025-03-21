@@ -4,7 +4,6 @@ exports.__esModule = true;
 var react_1 = require("react");
 var main_layout_1 = require("@/components/layout/main-layout");
 var tabs_1 = require("@/components/ui/tabs");
-var button_1 = require("@/components/ui/button");
 var post_card_1 = require("@/components/post-card");
 var auth_provider_1 = require("@/providers/auth-provider");
 var points_provider_1 = require("@/providers/points-provider");
@@ -20,6 +19,7 @@ var skeleton_1 = require("@/components/ui/skeleton");
 var profile_edit_form_1 = require("@/components/profile-edit-form");
 var WithdrawModal_1 = require("@/components/WithdrawModal");
 var use_posts_1 = require("@/hooks/use-posts");
+var WithdrawDonations_1 = require("@/components/WithdrawDonations");
 // ProfileLoadingState component
 function ProfileLoadingState() {
     return (React.createElement(main_layout_1.MainLayout, null,
@@ -61,7 +61,7 @@ function ProfilePage() {
     }, []);
     react_1.useEffect(function () {
         if (mounted && address) {
-            getUserPosts(address);
+            getUserPosts(address); // This will now fetch only the current user's posts
         }
     }, [mounted, address, getUserPosts]);
     if (!mounted) {
@@ -92,7 +92,7 @@ function ProfilePage() {
                             React.createElement("span", { className: "font-bold block" }, (userPosts === null || userPosts === void 0 ? void 0 : userPosts.length) || 0),
                             React.createElement("span", { className: "text-muted-foreground" }, "Posts"))),
                     React.createElement("div", { className: "flex gap-2 mb-6" },
-                        React.createElement(button_1.Button, { onClick: function () { return setIsWithdrawModalOpen(true); } }, "Withdraw Points"),
+                        address && React.createElement(WithdrawDonations_1.WithdrawDonations, null),
                         React.createElement(profile_edit_form_1.ProfileEditForm, { user: user }))),
                 React.createElement("div", { className: "mb-6" },
                     React.createElement("div", { className: "flex justify-between mb-2" },

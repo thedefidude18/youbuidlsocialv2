@@ -2,52 +2,69 @@
 "use strict";
 exports.__esModule = true;
 exports.RightSidebar = void 0;
+var react_1 = require("react");
 var avatar_1 = require("@/components/ui/avatar");
-var button_1 = require("@/components/ui/button");
+var points_system_1 = require("@/lib/points-system");
+var link_1 = require("next/link");
+var utils_1 = require("@/lib/utils");
 var card_1 = require("@/components/ui/card");
-var icons_1 = require("@/components/icons");
-function UserToFollow(_a) {
-    var id = _a.id, name = _a.name, username = _a.username, avatar = _a.avatar;
-    return (React.createElement("div", { className: "flex items-center gap-3 mb-4 hover:bg-secondary/50 rounded-lg p-2 transition-colors" },
-        React.createElement(avatar_1.Avatar, { className: "h-10 w-10" },
-            React.createElement(avatar_1.AvatarImage, { src: avatar, alt: name }),
-            React.createElement(avatar_1.AvatarFallback, null, name.charAt(0))),
-        React.createElement("div", { className: "flex-1 min-w-0" },
-            React.createElement("div", { className: "text-sm font-medium truncate" }, name),
-            React.createElement("div", { className: "text-xs text-muted-foreground truncate" },
-                "@",
-                username)),
-        React.createElement(button_1.Button, { size: "sm", variant: "outline", className: "rounded-full px-4" }, "Follow")));
+var use_posts_1 = require("@/hooks/use-posts");
+var lucide_react_1 = require("lucide-react");
+function TopPost(_a) {
+    var post = _a.post;
+    return (React.createElement(link_1["default"], { href: "/post/" + post.id, className: "px-4 py-3 hover:bg-secondary/80 transition-colors block" },
+        React.createElement("div", { className: "flex items-start gap-3" },
+            React.createElement(avatar_1.Avatar, { className: "h-8 w-8" },
+                React.createElement(avatar_1.AvatarImage, { src: post.author.avatar, alt: post.author.name }),
+                React.createElement(avatar_1.AvatarFallback, null, utils_1.formatAddress(post.author.id))),
+            React.createElement("div", { className: "flex-1 min-w-0" },
+                React.createElement("div", { className: "text-sm font-medium mb-1 truncate" }, utils_1.formatAddress(post.author.id)),
+                React.createElement("p", { className: "text-sm text-muted-foreground line-clamp-2" }, post.content),
+                React.createElement("div", { className: "flex items-center gap-4 mt-2 text-xs text-muted-foreground" },
+                    React.createElement("span", null,
+                        "\u2764\uFE0F ",
+                        post.stats.likes),
+                    React.createElement("span", null,
+                        "\uD83D\uDCAC ",
+                        post.stats.comments))))));
 }
 function RightSidebar() {
-    return (React.createElement("div", { className: "w-0 lg:w-80 border-l border-border h-full py-6 px-4 hidden lg:block overflow-y-auto scrollbar-thin scrollbar-thumb-secondary scrollbar-track-transparent" },
-        React.createElement("div", { className: "mb-6" },
-            React.createElement("div", { className: "flex items-center justify-between mb-4" },
-                React.createElement("h3", { className: "text-lg font-semibold" }, "Suggested Follows"),
-                React.createElement(icons_1.SettingsIcon, { className: "h-5 w-5 text-muted-foreground hover:text-foreground cursor-pointer" })),
-            React.createElement("div", { className: "space-y-2" },
-                React.createElement(UserToFollow, { id: "1", name: "John Doe", username: "johndoe", avatar: "https://placekitten.com/100/100" }),
-                React.createElement(UserToFollow, { id: "2", name: "Jane Smith", username: "janesmith", avatar: "https://placekitten.com/101/101" }),
-                React.createElement(UserToFollow, { id: "3", name: "Bob Johnson", username: "bobjohnson", avatar: "https://placekitten.com/102/102" })),
-            React.createElement("button", { className: "w-full text-sm text-primary hover:underline mt-3 text-center" }, "Show more")),
-        React.createElement("div", { className: "mb-6" },
-            React.createElement("div", { className: "flex items-center justify-between mb-4" },
-                React.createElement("h3", { className: "text-lg font-semibold" }, "Trending Frames"),
-                React.createElement(icons_1.SettingsIcon, { className: "h-5 w-5 text-muted-foreground hover:text-foreground cursor-pointer" })),
-            React.createElement(card_1.Card, { className: "overflow-hidden hover:shadow-md transition-shadow" },
-                React.createElement(card_1.CardHeader, { className: "p-0" },
-                    React.createElement("div", { className: "bg-gradient-to-r from-orange-500 to-amber-500 h-24 flex items-center justify-center" },
-                        React.createElement(icons_1.FramesIcon, { className: "h-8 w-8 text-white" }))),
-                React.createElement(card_1.CardContent, { className: "p-4" },
-                    React.createElement(card_1.CardTitle, { className: "text-sm mb-2" }, "Ball Frame"),
-                    React.createElement("div", { className: "text-xs text-muted-foreground" }, "12.3k views \u00B7 2.1k likes")))),
-        React.createElement("div", { className: "text-xs text-muted-foreground flex flex-wrap gap-2" },
-            React.createElement("a", { href: "#", className: "hover:underline" }, "Support"),
-            React.createElement("span", null, "\u00B7"),
-            React.createElement("a", { href: "#", className: "hover:underline" }, "Privacy"),
-            React.createElement("span", null, "\u00B7"),
-            React.createElement("a", { href: "#", className: "hover:underline" }, "Terms"),
-            React.createElement("span", null, "\u00B7"),
-            React.createElement("a", { href: "#", className: "hover:underline" }, "Developers"))));
+    var _a = react_1.useState(false), mounted = _a[0], setMounted = _a[1];
+    var _b = react_1.useState([]), topEarners = _b[0], setTopEarners = _b[1];
+    var _c = use_posts_1.usePosts(), posts = _c.posts, loading = _c.loading, refreshPosts = _c.refreshPosts;
+    react_1.useEffect(function () {
+        setMounted(true);
+        var leaderboard = points_system_1.getLeaderboard(5);
+        setTopEarners(leaderboard.map(function (user) { return ({
+            id: user.userId,
+            name: utils_1.formatAddress(user.userId),
+            username: utils_1.formatAddress(user.userId),
+            avatar: "https://api.dicebear.com/7.x/avatars/svg?seed=" + user.userId,
+            points: user.points,
+            level: user.level
+        }); }));
+    }, []);
+    react_1.useEffect(function () {
+        if (mounted) {
+            console.log('Fetching posts...');
+            refreshPosts();
+        }
+    }, [mounted, refreshPosts]);
+    // Debug logs
+    react_1.useEffect(function () {
+        console.log('Posts state:', { posts: posts, loading: loading, mounted: mounted });
+    }, [posts, loading, mounted]);
+    var recentPosts = (posts === null || posts === void 0 ? void 0 : posts.slice(0, 3)) || [];
+    if (!mounted)
+        return null;
+    return (React.createElement("div", { className: "w-0 lg:w-[320px] xl:w-[380px] h-full hidden lg:block bg-background" },
+        React.createElement("div", { className: "h-full flex flex-col" },
+            React.createElement("div", { className: "flex-1 overflow-y-auto hide-scrollbar" },
+                React.createElement("div", { className: "mb-4" },
+                    React.createElement(card_1.Card, { className: "overflow-hidden rounded-none border-x-0 bg-background" },
+                        React.createElement("div", { className: "p-4 font-semibold text-sm border-b border-border flex items-center gap-2" }, "\uD83D\uDCDD Recent Posts"),
+                        React.createElement("div", null, loading ? (React.createElement("div", { className: "flex items-center justify-center p-4" },
+                            React.createElement(lucide_react_1.Loader2, { className: "h-6 w-6 animate-spin text-muted-foreground" }))) : recentPosts.length > 0 ? (recentPosts.map(function (post) { return (React.createElement(TopPost, { key: post.id, post: post })); })) : (React.createElement("div", { className: "px-4 py-3 text-sm text-muted-foreground" }, "No recent posts")))))),
+            React.createElement("div", { className: "mt-auto pb-16 hide-scrollbar" }))));
 }
 exports.RightSidebar = RightSidebar;

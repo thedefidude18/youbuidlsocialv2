@@ -105,14 +105,7 @@ function HomeLoadingState() {
 }
 
 export default function HomePage() {
-  const router = useRouter();
-  const { user, isAuthenticated, isLoading } = useAuth();
-  const { isConnected } = useAccount();
-  const { points, level, levelProgress, nextLevelThreshold, pointsBreakdown } = usePoints();
-  const { following, followers, getFollowingCount, getFollowersCount } = useFollow();
-  const { posts, loading: postsLoading, refreshPosts } = usePosts();
-  const { createPost, isSubmitting } = useCreatePost();
-  
+  // 1. All useState hooks
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState('following');
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
@@ -120,44 +113,73 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
 
-  // Filter out invalid posts
-  const validPosts = posts?.filter(post => 
-    post && 
-    post.id && 
-    post.likes !== undefined && 
-    typeof post.id === 'string'
-  ) || [];
+  // 2. All context/external hooks
+  const router = useRouter();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const { isConnected } = useAccount();
+  const { points, level, levelProgress, nextLevelThreshold, pointsBreakdown } = usePoints();
+  const { following, followers, getFollowingCount, getFollowersCount } = useFollow();
+  const { posts, loading: postsLoading, refreshPosts } = usePosts();
+  const { createPost, isSubmitting } = useCreatePost();
 
-  // Handle mounting state
+  // 3. All useMemo hooks - must be before any conditional returns
+  const transformOrbisPost = useMemo(() => (post: any) => ({
+    id: post.stream_id,
+    content: post.content?.body || '',
+    author: {
+      id: post.creator,
+      name: post.creator_details?.profile?.username || 
+           post.creator?.slice(0, 6) + '...' + post.creator?.slice(-4),
+      username: post.creator_details?.profile?.username || post.creator,
+      avatar: post.creator_details?.profile?.pfp || '',
+      verified: false
+    },
+    timestamp: post.timestamp * 1000,
+    stats: {
+      likes: post.count_likes || 0,
+      comments: post.count_replies || 0,
+      reposts: post.count_hops || 0
+    },
+    ceramicData: post.content?.data || null
+  }), []);
+
+  const validPosts = useMemo(() => 
+    posts?.filter(post => 
+      post && 
+      post.id && 
+      post.likes !== undefined && 
+      typeof post.id === 'string'
+    ) || [], 
+    [posts]
+  );
+
+  const handleSearch = useMemo(() => (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    const normalizedQuery = query.toLowerCase().trim();
+    const matchingPosts = orbisPosts.filter(post => 
+      post.content?.toLowerCase().includes(normalizedQuery) ||
+      post.author.name.toLowerCase().includes(normalizedQuery) ||
+      post.author.username.toLowerCase().includes(normalizedQuery)
+    ).slice(0, 5);
+    setSearchResults(matchingPosts);
+  }, [orbisPosts]);
+
+  // 4. All useEffect hooks
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Transform Orbis posts to match PostCard interface
-  const transformOrbisPost = (post: any) => {
-    return {
-      id: post.stream_id,
-      content: post.content?.body || '',
-      author: {
-        id: post.creator,
-        name: post.creator_details?.profile?.username || 
-             post.creator?.slice(0, 6) + '...' + post.creator?.slice(-4),
-        username: post.creator_details?.profile?.username || post.creator,
-        avatar: post.creator_details?.profile?.pfp || '',
-        verified: false
-      },
-      timestamp: post.timestamp * 1000,
-      stats: {
-        likes: post.count_likes || 0,
-        comments: post.count_replies || 0,
-        reposts: post.count_hops || 0
-      },
-      ceramicData: post.content?.data || null
-    };
-  };
-
-  // Fetch Orbis posts
   useEffect(() => {
+    if (!mounted) return;
+    refreshPosts();
+  }, [mounted, refreshPosts]);
+
+  useEffect(() => {
+    if (!mounted) return;
+
     const fetchOrbisPosts = async () => {
       try {
         const { data, error } = await orbis.getPosts({
@@ -166,10 +188,9 @@ export default function HomePage() {
         
         if (error) throw error;
         
-        // Transform and sort posts - newest first
         const transformedPosts = (data || [])
           .map(transformOrbisPost)
-          .sort((a, b) => b.timestamp - a.timestamp); // Newest first
+          .sort((a, b) => b.timestamp - a.timestamp);
         
         setOrbisPosts(transformedPosts);
       } catch (error) {
@@ -177,35 +198,15 @@ export default function HomePage() {
       }
     };
 
-    if (mounted) {
-      fetchOrbisPosts();
-      refreshPosts();
-    }
-  }, [mounted, refreshPosts]);
+    fetchOrbisPosts();
+  }, [mounted, transformOrbisPost]);
 
-  // Loading state
+  // 5. Render loading state
   if (!mounted || isLoading) {
     return <ProfileLoadingState />;
   }
 
-  const handleSearch = (query: string) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      return;
-    }
-
-    const normalizedQuery = query.toLowerCase().trim();
-    
-    // Search in Orbis posts
-    const matchingPosts = orbisPosts.filter(post => 
-      post.content?.toLowerCase().includes(normalizedQuery) ||
-      post.author.name.toLowerCase().includes(normalizedQuery) ||
-      post.author.username.toLowerCase().includes(normalizedQuery)
-    ).slice(0, 5);
-
-    setSearchResults(matchingPosts);
-  };
-
+  // 6. Main render
   return (
     <MainLayout>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
@@ -399,6 +400,11 @@ export default function HomePage() {
     </MainLayout>
   );
 }
+
+
+
+
+
 
 
 
