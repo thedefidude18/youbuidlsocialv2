@@ -26,9 +26,34 @@ declare module '@orbisclub/orbis-sdk' {
             context?: string;
         }): Promise<{ data: { id: string; content: string }[]; error: { message: string; code: number } | null }>;
 
-        getPost(streamId: string): Promise<{ data: any; error: any }>;
+        getPost(streamId: string): Promise<{
+            data: {
+                id: string;
+                content: string;
+                creator: string;
+                creator_details?: {
+                    did: string;
+                    profile?: {
+                        username: string;
+                        pfp: string;
+                    };
+                };
+                context?: string;
+                timestamp: number;
+                count_likes: number;
+                count_replies: number;
+                count_haha: number;
+                count_downvotes: number;
+                tags?: string[];
+            };
+            error: {
+                message: string;
+                code: number;
+            } | null;
+        }>;
 
         react(postId: string, type: string): Promise<{ status: number; message: string }>;
     }
 }
+
 
