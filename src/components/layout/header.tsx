@@ -36,7 +36,7 @@ export function Header() {
           ) : (
             <Link href="/" className="flex items-center gap-2">
               <img src="/youlogo.svg" alt="Logo" className="h-6 w-6" />
-              <span className="font-semibold">youBuidl</span>
+              <span className="font-semibold"></span>
             </Link>
           )}
         </div>
@@ -44,7 +44,7 @@ export function Header() {
         {/* Points display - mobile only */}
         <div className="md:hidden flex-1 flex justify-center">
           <Button variant="ghost" className="text-sm">
-            {points} pts • Level {level}
+            {points} pts • Lvl {level}
           </Button>
         </div>
 

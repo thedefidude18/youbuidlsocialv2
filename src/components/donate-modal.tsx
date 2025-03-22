@@ -8,6 +8,7 @@ import { parseEther } from 'viem';
 import { donationContractABI } from '@/contracts/DonationContract';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2 } from 'lucide-react';
 
 const TOKENS = [
   { symbol: 'ETH', name: 'Ethereum', icon: '⟠', decimals: 18 },
@@ -22,27 +23,95 @@ export function DonateModal({ isOpen, onClose, author, streamId, postExcerpt }) 
   const [token, setToken] = useState(TOKENS[0]);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const contractAddress = process.env.NEXT_PUBLIC_DONATION_CONTRACT_ADDRESS;
+
+  // Add this console.log to debug
+  console.log('Contract Address:', contractAddress);
+  console.log('User Address:', address);
+
   const { write: donateETH, data: donationData } = useContractWrite({
-    address: process.env.NEXT_PUBLIC_DONATION_CONTRACT_ADDRESS,
+    address: contractAddress as `0x${string}`,
     abi: donationContractABI,
     functionName: 'donateETH',
-    value: amount ? parseEther(amount) : undefined,
+    onError: (error) => {
+      console.error('Contract write error:', error);
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
   });
 
   useWaitForTransactionReceipt({
     hash: donationData?.hash,
     onSuccess: () => {
       setIsProcessing(false);
-      toast({ title: 'Donation successful!', description: `You donated ${amount} ${token.symbol} to ${author.name}` });
+      toast({ 
+        title: 'Donation successful!', 
+        description: `You donated ${amount} ${token.symbol} to ${author.name}` 
+      });
       onClose();
     },
+    onError: (error) => {
+      setIsProcessing(false);
+      toast({ 
+        title: 'Transaction failed', 
+        description: error.message || 'Failed to process donation', 
+        variant: 'destructive' 
+      });
+    }
   });
 
-  const handleDonate = () => {
-    if (!address) return;
-    if (!amount || parseFloat(amount) <= 0) return toast({ title: 'Invalid amount', description: 'Enter a valid amount.', variant: 'destructive' });
-    setIsProcessing(true);
-    donateETH?.({ args: [streamId] });
+  const handleDonate = async () => {
+    if (!address) {
+      toast({ 
+        title: 'Connect Wallet', 
+        description: 'Please connect your wallet to donate.', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    if (!amount || parseFloat(amount) <= 0) {
+      toast({ 
+        title: 'Invalid amount', 
+        description: 'Please enter a valid amount.', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    if (!contractAddress) {
+      toast({
+        title: 'Configuration Error',
+        description: 'Donation contract address not configured',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      
+      if (token.symbol === 'ETH') {
+        donateETH?.({
+          args: [streamId],
+          value: parseEther(amount),
+        });
+      } else {
+        throw new Error('Only ETH donations are currently supported');
+      }
+
+    } catch (error) {
+      console.error('Donation error:', error);
+      setIsProcessing(false);
+      toast({ 
+        title: 'Error', 
+        description: error instanceof Error ? error.message : 'Failed to process donation.', 
+        variant: 'destructive' 
+      });
+    }
   };
 
   return (
@@ -79,27 +148,57 @@ export function DonateModal({ isOpen, onClose, author, streamId, postExcerpt }) 
               </SelectContent>
             </Select>
           </div>
-
-          <div>
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex justify-between">
-              Amount <span className="text-gray-500 dark:text-gray-400">({token.symbol})</span>
-            </label>
-            <Input
-              type="number"
-              step="0.001"
-              min="0"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="mt-1 text-center"
-            />
+          <Input
+            type="number"
+            placeholder="Amount in ETH"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            disabled={isProcessing}
+          />
+          <div className="flex gap-2">
+            {['0.01', '0.05', '0.1'].map((preset) => (
+              <Button
+                key={preset}
+                variant="outline"
+                size="sm"
+                onClick={() => setAmount(preset)}
+                disabled={isProcessing}
+              >
+                {preset} ETH
+              </Button>
+            ))}
           </div>
-
-          <Button disabled={isProcessing} onClick={handleDonate} className="w-full py-2 mt-2 px-4 max-w-[200px] mx-auto block truncate">
-            {isProcessing ? 'Processing...' : `Donate ${token.symbol}`}
+          <Button 
+            onClick={handleDonate} 
+            disabled={isProcessing || !amount}
+            className="w-full"
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              `Donate ${amount || '0'} ETH`
+            )}
           </Button>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

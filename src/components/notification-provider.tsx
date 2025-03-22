@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { orbis } from "@/lib/orbis";
 import type { NotificationItem } from '@/types/notification';
 import { getEthereumProvider } from "@/utils/wallet";
+import { useAccount } from 'wagmi';
 
 interface NotificationItem {
   id: string;
@@ -51,6 +52,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [mounted, setMounted] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const { isConnected } = useAccount();
 
   const initializeOrbis = async () => {
     try {
@@ -59,21 +61,18 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       }
 
       const provider = getEthereumProvider();
-      if (!provider) {
-        throw new Error("No Ethereum provider available");
-      }
+      if (provider && isConnected) {
+        const res = await orbis.connect_v2({
+          provider: provider,
+          chain: 'ethereum'
+        });
 
-      const res = await orbis.connect_v2({
-        provider: provider,
-        chain: 'ethereum'
-      });
-
-      if (!res?.status) {
-        throw new Error("Failed to connect to Orbis");
+        if (res?.status) {
+          setIsInitialized(true);
+          return true;
+        }
       }
-      
-      setIsInitialized(true);
-      return true;
+      return false;
     } catch (error) {
       console.error("Failed to initialize Orbis:", error);
       return false;
@@ -82,10 +81,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const fetchNotifications = async () => {
     try {
-      if (!isInitialized) {
+      if (!isInitialized && isConnected) {
         const initialized = await initializeOrbis();
         if (!initialized) return [];
       }
+
+      if (!isInitialized) return [];
 
       const result = await orbis.getNotifications();
       
@@ -157,19 +158,24 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (!mounted) {
       setMounted(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mounted && isConnected) {
       initializeOrbis().then(() => {
         fetchNotifications();
       });
     }
 
     const pollInterval = setInterval(() => {
-      if (isInitialized) {
+      if (isInitialized && isConnected) {
         fetchNotifications();
       }
     }, 30000);
 
     return () => clearInterval(pollInterval);
-  }, [mounted, isInitialized]);
+  }, [mounted, isConnected, isInitialized]);
 
   const unreadCount = notifications.filter(n => n.isNew).length;
 
@@ -244,6 +250,7 @@ export function useNotifications() {
   const context = useContext(NotificationContext);
   return context;
 }
+
 
 
 

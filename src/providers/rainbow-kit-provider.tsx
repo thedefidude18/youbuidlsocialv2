@@ -1,33 +1,45 @@
 'use client';
 
-import { WagmiProvider, createConfig, http, fallback } from 'wagmi';
-import { RainbowKitProvider as RainbowKit } from '@rainbow-me/rainbowkit';
+import { getDefaultWallets, RainbowKitProvider } from '@rainbow-me/rainbowkit';
+import { createConfig, WagmiConfig } from 'wagmi';
 import { optimismSepolia } from 'wagmi/chains';
+import { http } from 'viem';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { getEthereumProvider } from '@/utils/wallet';
+import React from 'react';
 
-// Configure multiple RPC endpoints
 const config = createConfig({
   chains: [optimismSepolia],
   transports: {
-    [optimismSepolia.id]: fallback([
-      http('https://opt-sepolia.g.alchemy.com/v2/qhQA96F2O5tBz61LvCoF-ZM044FxWSKs'),
-      http('https://opt-sepolia.g.alchemy.com/v2/qhQA96F2O5tBz61LvCoF-ZM044FxWSKs'),
-    ], { rank: true }),
-  },
+    [optimismSepolia.id]: http()
+  }
+});
+
+const { wallets } = getDefaultWallets({
+  appName: 'youBuidl',
+  projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID!,
+  chains: [optimismSepolia]
 });
 
 const queryClient = new QueryClient();
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   return (
-    <WagmiProvider config={config}>
+    <WagmiConfig config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKit>
+        <RainbowKitProvider chains={[optimismSepolia]} >
           {children}
-        </RainbowKit>
+        </RainbowKitProvider>
       </QueryClientProvider>
-    </WagmiProvider>
+    </WagmiConfig>
   );
 }
+
+
+
+
+
+
+
+
+
 

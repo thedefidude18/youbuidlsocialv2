@@ -59,6 +59,7 @@ exports.useNotifications = exports.NotificationProvider = void 0;
 var react_1 = require("react");
 var orbis_1 = require("@/lib/orbis");
 var wallet_1 = require("@/utils/wallet");
+var wagmi_1 = require("wagmi");
 var NotificationContext = react_1.createContext({
     notifications: [],
     unreadCount: 0,
@@ -76,35 +77,35 @@ function NotificationProvider(_a) {
     var _b = react_1.useState(false), mounted = _b[0], setMounted = _b[1];
     var _c = react_1.useState([]), notifications = _c[0], setNotifications = _c[1];
     var _d = react_1.useState(false), isInitialized = _d[0], setIsInitialized = _d[1];
+    var isConnected = wagmi_1.useAccount().isConnected;
     var initializeOrbis = function () { return __awaiter(_this, void 0, void 0, function () {
         var provider, res, error_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, 2, , 3]);
+                    _a.trys.push([0, 3, , 4]);
                     if (!orbis_1.orbis) {
                         throw new Error("Orbis not initialized");
                     }
                     provider = wallet_1.getEthereumProvider();
-                    if (!provider) {
-                        throw new Error("No Ethereum provider available");
-                    }
+                    if (!(provider && isConnected)) return [3 /*break*/, 2];
                     return [4 /*yield*/, orbis_1.orbis.connect_v2({
                             provider: provider,
                             chain: 'ethereum'
                         })];
                 case 1:
                     res = _a.sent();
-                    if (!(res === null || res === void 0 ? void 0 : res.status)) {
-                        throw new Error("Failed to connect to Orbis");
+                    if (res === null || res === void 0 ? void 0 : res.status) {
+                        setIsInitialized(true);
+                        return [2 /*return*/, true];
                     }
-                    setIsInitialized(true);
-                    return [2 /*return*/, true];
-                case 2:
+                    _a.label = 2;
+                case 2: return [2 /*return*/, false];
+                case 3:
                     error_1 = _a.sent();
                     console.error("Failed to initialize Orbis:", error_1);
                     return [2 /*return*/, false];
-                case 3: return [2 /*return*/];
+                case 4: return [2 /*return*/];
             }
         });
     }); };
@@ -114,14 +115,17 @@ function NotificationProvider(_a) {
             switch (_a.label) {
                 case 0:
                     _a.trys.push([0, 4, , 5]);
-                    if (!!isInitialized) return [3 /*break*/, 2];
+                    if (!(!isInitialized && isConnected)) return [3 /*break*/, 2];
                     return [4 /*yield*/, initializeOrbis()];
                 case 1:
                     initialized = _a.sent();
                     if (!initialized)
                         return [2 /*return*/, []];
                     _a.label = 2;
-                case 2: return [4 /*yield*/, orbis_1.orbis.getNotifications()];
+                case 2:
+                    if (!isInitialized)
+                        return [2 /*return*/, []];
+                    return [4 /*yield*/, orbis_1.orbis.getNotifications()];
                 case 3:
                     result = _a.sent();
                     if (!result || !result.data) {
@@ -190,17 +194,21 @@ function NotificationProvider(_a) {
     react_1.useEffect(function () {
         if (!mounted) {
             setMounted(true);
+        }
+    }, []);
+    react_1.useEffect(function () {
+        if (mounted && isConnected) {
             initializeOrbis().then(function () {
                 fetchNotifications();
             });
         }
         var pollInterval = setInterval(function () {
-            if (isInitialized) {
+            if (isInitialized && isConnected) {
                 fetchNotifications();
             }
         }, 30000);
         return function () { return clearInterval(pollInterval); };
-    }, [mounted, isInitialized]);
+    }, [mounted, isConnected, isInitialized]);
     var unreadCount = notifications.filter(function (n) { return n.isNew; }).length;
     var addNotification = function (notification) {
         setNotifications(function (prev) { return __spreadArrays([notification], prev); });

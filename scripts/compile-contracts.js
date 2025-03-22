@@ -5,10 +5,11 @@ const { artifacts } = require("hardhat");
 async function main() {
   // Get PostRegistry artifact
   const PostRegistry = await artifacts.readArtifact("PostRegistry");
+  const DonationContract = await artifacts.readArtifact("DonationContract");
 
   // Extract the ABI and add the contract address
   const contractData = {
-    abi: PostRegistry.abi,
+    abi: DonationContract.abi,
     address: "0x31a785DCF8ED15FF30Cb2170066D0a44277B0625",
     networks: {
       11155420: {
@@ -19,7 +20,7 @@ async function main() {
 
   // Write ABI to src/contracts
   fs.writeFileSync(
-    path.resolve(__dirname, '../src/contracts/PostRegistry.json'),
+    path.resolve(__dirname, '../src/contracts/DonationContract.json'),
     JSON.stringify(contractData, null, 2)
   );
 

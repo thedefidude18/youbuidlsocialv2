@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Inter } from 'next/font/google';
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { NotificationProvider } from "@/components/notification-provider";
@@ -8,6 +7,10 @@ import { AuthProvider } from "@/providers/auth-provider";
 import { PointsProvider } from "@/providers/points-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { MobileNav } from "@/components/mobile-nav";
+import type { Metadata } from "next";
+import { Inter } from 'next/font/google';
+import "./globals.css";
+import { Providers } from "@/components/providers";
 
 const inter = Inter({
   subsets: ['latin'],
@@ -36,8 +39,8 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <NotificationProvider>
-            <WalletProvider>
+          <WalletProvider>
+            <NotificationProvider>
               <AuthProvider>
                 <PointsProvider>
                   {children}
@@ -45,13 +48,22 @@ export default function RootLayout({
                   <MobileNav />
                 </PointsProvider>
               </AuthProvider>
-            </WalletProvider>
-          </NotificationProvider>
+            </NotificationProvider>
+          </WalletProvider>
         </ThemeProvider>
       </body>
     </html>
   );
 }
+
+
+
+
+
+
+
+
+
 
 
 
