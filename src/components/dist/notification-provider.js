@@ -115,17 +115,17 @@ function NotificationProvider(_a) {
             switch (_a.label) {
                 case 0:
                     _a.trys.push([0, 4, , 5]);
-                    if (!(!isInitialized && isConnected)) return [3 /*break*/, 2];
+                    if (!isConnected) {
+                        return [2 /*return*/, []];
+                    }
+                    if (!!isInitialized) return [3 /*break*/, 2];
                     return [4 /*yield*/, initializeOrbis()];
                 case 1:
                     initialized = _a.sent();
                     if (!initialized)
                         return [2 /*return*/, []];
                     _a.label = 2;
-                case 2:
-                    if (!isInitialized)
-                        return [2 /*return*/, []];
-                    return [4 /*yield*/, orbis_1.orbis.getNotifications()];
+                case 2: return [4 /*yield*/, orbis_1.orbis.getNotifications()];
                 case 3:
                     result = _a.sent();
                     if (!result || !result.data) {

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useAccount } from 'wagmi';
-import { Image, Play, X, Loader2, Code, FileText, Link } from 'lucide-react';
+import { Image, Play, X, Loader2, Code, Link } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createPost } from '@/lib/orbis';
 import { useToast } from '@/hooks/use-toast';
@@ -375,6 +375,8 @@ export function ComposeBox({
     </form>
   );
 }
+
+
 
 
 

@@ -37,33 +37,14 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 exports.__esModule = true;
-exports.useAuth = exports.AuthProvider = void 0;
-var react_1 = require("react");
-var orbis_sdk_1 = require("@orbisclub/orbis-sdk");
-var use_session_timeout_1 = require("@/hooks/use-session-timeout");
+exports.useAuth = void 0;
 var react_auth_1 = require("@privy-io/react-auth");
-var AuthContext = react_1.createContext({
-    isAuthenticated: false,
-    isLoading: true,
-    user: null,
-    signIn: function () { return __awaiter(void 0, void 0, void 0, function () { return __generator(this, function (_a) {
-        return [2 /*return*/];
-    }); }); },
-    signOut: function () { }
-});
-function AuthProvider(_a) {
+var use_toast_1 = require("@/components/ui/use-toast");
+function useAuth() {
     var _this = this;
-    var children = _a.children;
-    var _b = react_auth_1.usePrivy(), privyUser = _b.user, privyAuthenticated = _b.isAuthenticated, login = _b.login, logout = _b.logout;
-    var _c = react_1.useState(true), isLoading = _c[0], setIsLoading = _c[1];
-    var _d = react_1.useState(null), user = _d[0], setUser = _d[1];
-    var orbis = new orbis_sdk_1.Orbis({
-        useLit: false,
-        node: "https://node2.orbis.club",
-        PINATA_GATEWAY: 'https://gateway.pinata.cloud/ipfs/',
-        CERAMIC_NODE: "https://node2.orbis.club"
-    });
-    var signIn = function () { return __awaiter(_this, void 0, void 0, function () {
+    var _a;
+    var _b = react_auth_1.usePrivy(), ready = _b.ready, authenticated = _b.authenticated, user = _b.user, login = _b.login, logout = _b.logout, sendTransaction = _b.sendTransaction;
+    var handleLogin = function () { return __awaiter(_this, void 0, void 0, function () {
         var error_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
@@ -75,13 +56,17 @@ function AuthProvider(_a) {
                     return [3 /*break*/, 3];
                 case 2:
                     error_1 = _a.sent();
-                    console.error('Sign in failed:', error_1);
+                    use_toast_1.toast({
+                        title: "Authentication Error",
+                        description: "Failed to login. Please try again.",
+                        variant: "destructive"
+                    });
                     return [3 /*break*/, 3];
                 case 3: return [2 /*return*/];
             }
         });
     }); };
-    var signOut = function () { return __awaiter(_this, void 0, void 0, function () {
+    var handleLogout = function () { return __awaiter(_this, void 0, void 0, function () {
         var error_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
@@ -90,27 +75,27 @@ function AuthProvider(_a) {
                     return [4 /*yield*/, logout()];
                 case 1:
                     _a.sent();
-                    setUser(null);
                     return [3 /*break*/, 3];
                 case 2:
                     error_2 = _a.sent();
-                    console.error('Sign out failed:', error_2);
+                    use_toast_1.toast({
+                        title: "Logout Error",
+                        description: "Failed to logout. Please try again.",
+                        variant: "destructive"
+                    });
                     return [3 /*break*/, 3];
                 case 3: return [2 /*return*/];
             }
         });
     }); };
-    use_session_timeout_1.useSessionTimeout();
-    return (React.createElement(AuthContext.Provider, { value: {
-            isAuthenticated: privyAuthenticated,
-            isLoading: isLoading,
-            user: user,
-            signIn: signIn,
-            signOut: signOut
-        } }, children));
-}
-exports.AuthProvider = AuthProvider;
-function useAuth() {
-    return react_1.useContext(AuthContext);
+    return {
+        isLoading: !ready,
+        isAuthenticated: authenticated,
+        user: user,
+        login: handleLogin,
+        logout: handleLogout,
+        sendTransaction: sendTransaction,
+        address: (_a = user === null || user === void 0 ? void 0 : user.wallet) === null || _a === void 0 ? void 0 : _a.address
+    };
 }
 exports.useAuth = useAuth;

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { MainLayout } from "@/components/layout/main-layout";
@@ -53,7 +53,6 @@ function ProfileLoadingState() {
             </div>
             <Skeleton className="h-9 w-24" />
           </div>
-          
           <div className="space-y-2">
             <Skeleton className="h-6 w-32" />
             <Skeleton className="h-4 w-24" />
@@ -117,7 +116,7 @@ export default function HomePage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuth();
   const { isConnected } = useAccount();
-  const { points, level, levelProgress, nextLevelThreshold, pointsBreakdown } = usePoints();
+  const { points, level, nextLevelThreshold, pointsBreakdown } = usePoints();
   const { following, followers, getFollowingCount, getFollowersCount } = useFollow();
   const { posts, loading: postsLoading, refreshPosts } = usePosts();
   const { createPost, isSubmitting } = useCreatePost();
@@ -147,7 +146,7 @@ export default function HomePage() {
     posts?.filter(post => 
       post && 
       post.id && 
-      post.likes !== undefined && 
+      post.stats?.likes !== undefined && 
       typeof post.id === 'string'
     ) || [], 
     [posts]
@@ -208,53 +207,70 @@ export default function HomePage() {
 
   // 6. Main render
   return (
-    <MainLayout>
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        <div className="border-b border-border">
-          <div className="max-w-2xl mx-auto">
-            <TabsList className="w-full justify-center px-4 h-12">
-              <TabsTrigger value="latest">Latest</TabsTrigger>
-              <TabsTrigger value="following">Following</TabsTrigger>
-              <TabsTrigger value="foryou">For You</TabsTrigger>
-              <TabsTrigger value="search">
-                <div className="flex items-center gap-2">
-                  <Search className="h-4 w-4" />
-                  Search
-                </div>
-              </TabsTrigger>
-            </TabsList>
-          </div>
-        </div>
-
-        <ScrollArea className="flex-1">
-          {/* Hide ComposeBox on mobile screens */}
-          <div className="hidden md:block p-4">
-            <ComposeBox 
-              onSubmit={createPost} 
-              isSubmitting={isSubmitting} 
-              placeholder="What's happening?"
-              maxLength={280}
-            />
-          </div>
-
-          <TabsContent value="latest" className="m-0 p-4">
-            <div className="space-y-4">
-              {postsLoading ? (
-                <HomeLoadingState />
-              ) : orbisPosts.length > 0 ? (
-                orbisPosts.map((post, index) => (
-                  <PostCard 
-                    key={`latest-${post.id}-${index}`} 
-                    post={post} 
-                  />
-                ))
-              ) : (
-                <div className="text-center text-muted-foreground p-8">
-                  No posts yet. Be the first to post!
-                </div>
-              )}
+    <div>
+      <MainLayout>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+          <div className="border-b border-border">
+            <div className="max-w-2xl mx-auto">
+              <TabsList className="w-full justify-center px-4 h-12">
+                <TabsTrigger value="latest">Latest</TabsTrigger>
+                <TabsTrigger value="following">Following</TabsTrigger>
+                <TabsTrigger value="foryou">For You</TabsTrigger>
+                <TabsTrigger value="search">
+                  <div className="flex items-center gap-2">
+                    <Search className="h-4 w-4" />
+                    Search
+                  </div>
+                </TabsTrigger>
+              </TabsList>
             </div>
-          </TabsContent>
+          </div>
+
+          <ScrollArea className="flex-1">
+            <div className="hidden md:block p-4">
+              <ComposeBox 
+                onSubmit={createPost} 
+                isSubmitting={isSubmitting} 
+                placeholder="What's happening?"
+                maxLength={280}
+              />
+            </div>
+
+            <TabsContent value="latest" className="m-0 p-4">
+              <div className="space-y-4">
+                {postsLoading ? (
+                  <HomeLoadingState />
+                ) : orbisPosts.length > 0 ? (
+                  orbisPosts.map((post) => (
+                    <PostCard 
+                      key={post.stream_id} 
+                      post={{
+                        id: post.stream_id,
+                        content: post.content?.body || '',
+                        author: {
+                          id: post.creator,
+                          name: post.creator_details?.profile?.username || 'Anonymous',
+                          username: post.creator_details?.profile?.username || 'anonymous',
+                          avatar: post.creator_details?.profile?.pfp || 
+                            `https://api.dicebear.com/7.x/avatars/svg?seed=${post.creator}`,
+                          verified: post.creator_details?.profile?.verified || false
+                        },
+                        timestamp: post.timestamp,
+                        stats: {
+                          likes: post.count_likes || 0,
+                          comments: post.count_replies || 0,
+                          reposts: post.count_haha || 0
+                        }
+                      }} 
+                    />
+                  ))
+                ) : (
+                  <div className="text-center text-muted-foreground p-8">
+                    No posts yet. Be the first to post!
+                  </div>
+                )}
+              </div>
+            </TabsContent>
 
           <TabsContent value="following" className="m-0 p-4">
             <div className="space-y-4">
@@ -395,11 +411,24 @@ export default function HomePage() {
               )}
             </div>
           </TabsContent>
-        </ScrollArea>
-      </Tabs>
-    </MainLayout>
+          </ScrollArea>
+        </Tabs>
+      </MainLayout>
+    </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

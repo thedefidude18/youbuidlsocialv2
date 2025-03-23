@@ -34,5 +34,18 @@ exports.usePostsStore = zustand_1.create(function (set) { return ({
         })
     }); }); },
     setLoading: function (loading) { return set({ loading: loading }); },
-    setError: function (error) { return set({ error: error }); }
+    setError: function (error) { return set({ error: error }); },
+    addPost: function (post) { return set(function (state) { return ({ posts: __spreadArrays([post], state.posts) }); }); },
+    updatePost: function (id, updatedPost) {
+        return set(function (state) { return ({
+            posts: state.posts.map(function (post) {
+                return post.id === id ? __assign(__assign({}, post), updatedPost) : post;
+            })
+        }); });
+    },
+    removePost: function (id) {
+        return set(function (state) { return ({
+            posts: state.posts.filter(function (post) { return post.id !== id; })
+        }); });
+    }
 }); });

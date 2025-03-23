@@ -75,13 +75,49 @@ export function usePosts() {
     }
   }, []);
 
+  const getUserPosts = useCallback(async (userAddress: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!orbis) {
+        throw new Error('Orbis client not initialized');
+      }
+
+      const result = await orbis.getPosts({
+        context: 'youbuidl:post',
+        did: userAddress // Filter posts by user's DID/address
+      });
+
+      if (!result || !result.data) {
+        throw new Error('Invalid response from Orbis');
+      }
+
+      const transformedPosts = result.data.map(transformPost);
+      
+      const sortedPosts = transformedPosts.sort((a, b) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+
+      setPosts(sortedPosts);
+    } catch (err) {
+      console.error('Error fetching user posts:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch user posts');
+      setPosts([]); // Reset posts on error
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return {
     posts,
     loading,
     error,
-    refreshPosts
+    refreshPosts,
+    getUserPosts
   };
 }
+
 
 
 

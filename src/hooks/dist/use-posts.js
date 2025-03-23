@@ -103,11 +103,51 @@ function usePosts() {
             }
         });
     }); }, []);
+    var getUserPosts = react_1.useCallback(function (userAddress) { return __awaiter(_this, void 0, void 0, function () {
+        var result, transformedPosts, sortedPosts, err_2;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    _a.trys.push([0, 2, 3, 4]);
+                    setLoading(true);
+                    setError(null);
+                    if (!orbis_1.orbis) {
+                        throw new Error('Orbis client not initialized');
+                    }
+                    return [4 /*yield*/, orbis_1.orbis.getPosts({
+                            context: 'youbuidl:post',
+                            did: userAddress // Filter posts by user's DID/address
+                        })];
+                case 1:
+                    result = _a.sent();
+                    if (!result || !result.data) {
+                        throw new Error('Invalid response from Orbis');
+                    }
+                    transformedPosts = result.data.map(transformPost);
+                    sortedPosts = transformedPosts.sort(function (a, b) {
+                        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+                    });
+                    setPosts(sortedPosts);
+                    return [3 /*break*/, 4];
+                case 2:
+                    err_2 = _a.sent();
+                    console.error('Error fetching user posts:', err_2);
+                    setError(err_2 instanceof Error ? err_2.message : 'Failed to fetch user posts');
+                    setPosts([]); // Reset posts on error
+                    return [3 /*break*/, 4];
+                case 3:
+                    setLoading(false);
+                    return [7 /*endfinally*/];
+                case 4: return [2 /*return*/];
+            }
+        });
+    }); }, []);
     return {
         posts: posts,
         loading: loading,
         error: error,
-        refreshPosts: refreshPosts
+        refreshPosts: refreshPosts,
+        getUserPosts: getUserPosts
     };
 }
 exports.usePosts = usePosts;

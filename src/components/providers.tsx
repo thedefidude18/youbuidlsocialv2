@@ -8,11 +8,14 @@ import { PointsProvider } from "@/providers/points-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { MobileNav } from "@/components/mobile-nav";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useNetworkStatus } from '@/hooks/use-network-status';
 
 // Create a client
 const queryClient = new QueryClient();
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  useNetworkStatus();
+  
   return (
     <QueryClientProvider client={queryClient}>
       <WalletProvider>
@@ -36,3 +39,4 @@ export function Providers({ children }: { children: React.ReactNode }) {
     </QueryClientProvider>
   );
 }
+

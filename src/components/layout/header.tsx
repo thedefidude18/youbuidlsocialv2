@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { WalletConnectButton } from "@/components/wallet-connect-button";
 import { usePoints } from "@/providers/points-provider";
 import { useAuth } from "@/providers/auth-provider";
 import { Search, Github, ArrowLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { LoginButton } from "@/components/login-button";
 
 export function Header() {
   const { points, level } = usePoints();
@@ -76,12 +76,16 @@ export function Header() {
             </Button>
           </Link>
           <ThemeToggle />
-          <WalletConnectButton size="sm" variant="outline" className="!h-9 min-w-[120px]" />
+          <LoginButton />
         </div>
       </div>
     </header>
   );
 }
+
+
+
+
 
 
 

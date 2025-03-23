@@ -44,89 +44,113 @@ var use_create_post_1 = require("@/hooks/use-create-post");
 var post_card_1 = require("./post-card");
 var compose_box_1 = require("./compose-box");
 var orbis_1 = require("@/lib/orbis");
+var react_auth_1 = require("@privy-io/react-auth");
+var spinner_1 = require("./ui/spinner");
 function HomeFeed() {
     var _this = this;
     var _a = posts_store_1.usePostsStore(), posts = _a.posts, setPosts = _a.setPosts, loading = _a.loading, setLoading = _a.setLoading, error = _a.error, setError = _a.setError;
     var _b = use_create_post_1.useCreatePost(), createPost = _b.createPost, isSubmitting = _b.isSubmitting;
+    var authenticated = react_auth_1.usePrivy().authenticated;
+    var _c = react_1.useState(false), mounted = _c[0], setMounted = _c[1];
     var fetchPosts = function () { return __awaiter(_this, void 0, void 0, function () {
         var _a, orbisPosts, orbisError, transformedPosts, err_1;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
-                    _b.trys.push([0, 2, 3, 4]);
+                    if (loading)
+                        return [2 /*return*/]; // Prevent multiple simultaneous fetches
+                    _b.label = 1;
+                case 1:
+                    _b.trys.push([1, 3, 4, 5]);
                     setLoading(true);
                     setError(null);
                     return [4 /*yield*/, orbis_1.orbis.getPosts({
                             context: 'youbuidl:post'
                         })];
-                case 1:
+                case 2:
                     _a = _b.sent(), orbisPosts = _a.data, orbisError = _a.error;
                     if (orbisError) {
                         throw new Error(orbisError);
                     }
-                    transformedPosts = orbisPosts
-                        .map(function (post) {
-                        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
+                    if (!orbisPosts) {
+                        setPosts([]);
+                        return [2 /*return*/];
+                    }
+                    transformedPosts = orbisPosts.map(function (post) {
+                        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
                         return ({
                             id: post.stream_id,
                             content: ((_a = post.content) === null || _a === void 0 ? void 0 : _a.body) || '',
                             author: {
                                 id: ((_b = post.creator_details) === null || _b === void 0 ? void 0 : _b.did) || '',
-                                name: ((_d = (_c = post.creator_details) === null || _c === void 0 ? void 0 : _c.profile) === null || _d === void 0 ? void 0 : _d.username) || ((_f = (_e = post.creator_details) === null || _e === void 0 ? void 0 : _e.did) === null || _f === void 0 ? void 0 : _f.slice(0, 6)) + '...',
-                                username: ((_h = (_g = post.creator_details) === null || _g === void 0 ? void 0 : _g.profile) === null || _h === void 0 ? void 0 : _h.username) || ((_j = post.creator_details) === null || _j === void 0 ? void 0 : _j.did),
-                                avatar: ((_l = (_k = post.creator_details) === null || _k === void 0 ? void 0 : _k.profile) === null || _l === void 0 ? void 0 : _l.pfp) || '',
-                                verified: ((_o = (_m = post.creator_details) === null || _m === void 0 ? void 0 : _m.profile) === null || _o === void 0 ? void 0 : _o.verified) || false
+                                name: ((_d = (_c = post.creator_details) === null || _c === void 0 ? void 0 : _c.profile) === null || _d === void 0 ? void 0 : _d.username) || 'Anonymous',
+                                username: ((_f = (_e = post.creator_details) === null || _e === void 0 ? void 0 : _e.profile) === null || _f === void 0 ? void 0 : _f.username) || 'anonymous',
+                                avatar: ((_h = (_g = post.creator_details) === null || _g === void 0 ? void 0 : _g.profile) === null || _h === void 0 ? void 0 : _h.pfp) || "https://api.dicebear.com/7.x/avatars/svg?seed=" + ((_j = post.creator_details) === null || _j === void 0 ? void 0 : _j.did),
+                                verified: ((_l = (_k = post.creator_details) === null || _k === void 0 ? void 0 : _k.profile) === null || _l === void 0 ? void 0 : _l.verified) || false
                             },
-                            timestamp: Number(post.timestamp) * 1000,
+                            timestamp: post.timestamp || Date.now(),
                             stats: {
                                 likes: post.count_likes || 0,
                                 comments: post.count_replies || 0,
-                                reposts: post.count_haha || 0
+                                reposts: 0
                             }
                         });
-                    })
-                        .sort(function (a, b) { return b.timestamp - a.timestamp; });
+                    });
                     setPosts(transformedPosts);
-                    return [3 /*break*/, 4];
-                case 2:
+                    return [3 /*break*/, 5];
+                case 3:
                     err_1 = _b.sent();
                     console.error('Error fetching posts:', err_1);
                     setError(err_1 instanceof Error ? err_1.message : 'Failed to fetch posts');
-                    return [3 /*break*/, 4];
-                case 3:
+                    return [3 /*break*/, 5];
+                case 4:
                     setLoading(false);
                     return [7 /*endfinally*/];
-                case 4: return [2 /*return*/];
+                case 5: return [2 /*return*/];
             }
         });
     }); };
+    // Initialize component
     react_1.useEffect(function () {
-        fetchPosts();
-    }, []); // Run once on mount
+        setMounted(true);
+    }, []);
+    // Fetch posts when component mounts
+    react_1.useEffect(function () {
+        if (mounted) {
+            fetchPosts();
+        }
+    }, [mounted]);
     var handleCreatePost = function (content) { return __awaiter(_this, void 0, void 0, function () {
-        var success;
+        var err_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, createPost(content)];
+                case 0:
+                    if (!authenticated)
+                        return [2 /*return*/];
+                    _a.label = 1;
                 case 1:
-                    success = _a.sent();
-                    if (!success) return [3 /*break*/, 3];
-                    // Refresh posts after successful creation
-                    return [4 /*yield*/, fetchPosts()];
+                    _a.trys.push([1, 4, , 5]);
+                    return [4 /*yield*/, createPost(content)];
                 case 2:
-                    // Refresh posts after successful creation
                     _a.sent();
-                    _a.label = 3;
-                case 3: return [2 /*return*/];
+                    return [4 /*yield*/, fetchPosts()];
+                case 3:
+                    _a.sent(); // Refresh posts after creating new one
+                    return [3 /*break*/, 5];
+                case 4:
+                    err_2 = _a.sent();
+                    console.error('Error creating post:', err_2);
+                    return [3 /*break*/, 5];
+                case 5: return [2 /*return*/];
             }
         });
     }); };
     return (React.createElement("div", { className: "max-w-2xl mx-auto" },
-        React.createElement("div", { className: "hidden md:block sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-4" },
-            React.createElement(compose_box_1.ComposeBox, { onSubmit: handleCreatePost, isSubmitting: isSubmitting })),
-        React.createElement("div", { className: "divide-y divide-gray-200 dark:divide-gray-800" }, loading ? (React.createElement("div", { className: "flex items-center justify-center p-8" },
-            React.createElement("div", { className: "animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white" }))) : error ? (React.createElement("div", { className: "p-4 text-red-500 text-center" },
+        authenticated && (React.createElement("div", { className: "hidden md:block sticky top-0 z-10 bg-background border-b border-border p-4" },
+            React.createElement(compose_box_1.ComposeBox, { onSubmit: handleCreatePost, isSubmitting: isSubmitting }))),
+        React.createElement("div", { className: "divide-y divide-border" }, loading ? (React.createElement("div", { className: "flex items-center justify-center p-8" },
+            React.createElement(spinner_1.Spinner, null))) : error ? (React.createElement("div", { className: "p-4 text-destructive text-center" },
             React.createElement("p", { className: "font-medium" }, "Something went wrong"),
-            React.createElement("p", { className: "text-sm" }, error))) : posts.length === 0 ? (React.createElement("div", { className: "p-8 text-center text-gray-500" }, "No posts yet. Be the first to post!")) : (posts.map(function (post) { return (React.createElement(post_card_1.PostCard, { key: post.id, post: post })); })))));
+            React.createElement("p", { className: "text-sm" }, error))) : posts.length === 0 ? (React.createElement("div", { className: "p-8 text-center text-muted-foreground" }, "No posts yet. Be the first to post!")) : (posts.map(function (post) { return (React.createElement(post_card_1.PostCard, { key: post.id, post: post })); })))));
 }
 exports.HomeFeed = HomeFeed;

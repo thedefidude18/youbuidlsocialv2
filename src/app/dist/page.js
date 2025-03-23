@@ -1,4 +1,4 @@
-"use client";
+'use client';
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -107,7 +107,7 @@ function HomePage() {
     var router = navigation_1.useRouter();
     var _g = auth_provider_1.useAuth(), user = _g.user, isAuthenticated = _g.isAuthenticated, isLoading = _g.isLoading;
     var isConnected = wagmi_1.useAccount().isConnected;
-    var _h = points_provider_1.usePoints(), points = _h.points, level = _h.level, levelProgress = _h.levelProgress, nextLevelThreshold = _h.nextLevelThreshold, pointsBreakdown = _h.pointsBreakdown;
+    var _h = points_provider_1.usePoints(), points = _h.points, level = _h.level, nextLevelThreshold = _h.nextLevelThreshold, pointsBreakdown = _h.pointsBreakdown;
     var _j = use_follow_1.useFollow(), following = _j.following, followers = _j.followers, getFollowingCount = _j.getFollowingCount, getFollowersCount = _j.getFollowersCount;
     var _k = use_posts_1.usePosts(), posts = _k.posts, postsLoading = _k.loading, refreshPosts = _k.refreshPosts;
     var _l = use_create_post_1.useCreatePost(), createPost = _l.createPost, isSubmitting = _l.isSubmitting;
@@ -136,9 +136,10 @@ function HomePage() {
     }; }, []);
     var validPosts = react_1.useMemo(function () {
         return (posts === null || posts === void 0 ? void 0 : posts.filter(function (post) {
+            var _a;
             return post &&
                 post.id &&
-                post.likes !== undefined &&
+                ((_a = post.stats) === null || _a === void 0 ? void 0 : _a.likes) !== undefined &&
                 typeof post.id === 'string';
         })) || [];
     }, [posts]);
@@ -217,7 +218,27 @@ function HomePage() {
                 React.createElement("div", { className: "hidden md:block p-4" },
                     React.createElement(compose_box_1.ComposeBox, { onSubmit: createPost, isSubmitting: isSubmitting, placeholder: "What's happening?", maxLength: 280 })),
                 React.createElement(tabs_1.TabsContent, { value: "latest", className: "m-0 p-4" },
-                    React.createElement("div", { className: "space-y-4" }, postsLoading ? (React.createElement(HomeLoadingState, null)) : orbisPosts.length > 0 ? (orbisPosts.map(function (post, index) { return (React.createElement(post_card_1.PostCard, { key: "latest-" + post.id + "-" + index, post: post })); })) : (React.createElement("div", { className: "text-center text-muted-foreground p-8" }, "No posts yet. Be the first to post!")))),
+                    React.createElement("div", { className: "space-y-4" }, postsLoading ? (React.createElement(HomeLoadingState, null)) : orbisPosts.length > 0 ? (orbisPosts.map(function (post) {
+                        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+                        return (React.createElement(post_card_1.PostCard, { key: post.stream_id, post: {
+                                id: post.stream_id,
+                                content: ((_a = post.content) === null || _a === void 0 ? void 0 : _a.body) || '',
+                                author: {
+                                    id: post.creator,
+                                    name: ((_c = (_b = post.creator_details) === null || _b === void 0 ? void 0 : _b.profile) === null || _c === void 0 ? void 0 : _c.username) || 'Anonymous',
+                                    username: ((_e = (_d = post.creator_details) === null || _d === void 0 ? void 0 : _d.profile) === null || _e === void 0 ? void 0 : _e.username) || 'anonymous',
+                                    avatar: ((_g = (_f = post.creator_details) === null || _f === void 0 ? void 0 : _f.profile) === null || _g === void 0 ? void 0 : _g.pfp) ||
+                                        "https://api.dicebear.com/7.x/avatars/svg?seed=" + post.creator,
+                                    verified: ((_j = (_h = post.creator_details) === null || _h === void 0 ? void 0 : _h.profile) === null || _j === void 0 ? void 0 : _j.verified) || false
+                                },
+                                timestamp: post.timestamp,
+                                stats: {
+                                    likes: post.count_likes || 0,
+                                    comments: post.count_replies || 0,
+                                    reposts: post.count_haha || 0
+                                }
+                            } }));
+                    })) : (React.createElement("div", { className: "text-center text-muted-foreground p-8" }, "No posts yet. Be the first to post!")))),
                 React.createElement(tabs_1.TabsContent, { value: "following", className: "m-0 p-4" },
                     React.createElement("div", { className: "space-y-4" }, postsLoading ? (React.createElement(HomeLoadingState, null)) : validPosts.length > 0 ? (validPosts.map(function (post, index) { return (React.createElement(post_card_1.PostCard, { key: "following-" + post.id + "-" + index, post: post })); })) : (React.createElement("div", { className: "text-center text-muted-foreground p-8" }, "No posts from people you follow. Start following some builders!")))),
                 React.createElement(tabs_1.TabsContent, { value: "foryou", className: "m-0 p-4" },

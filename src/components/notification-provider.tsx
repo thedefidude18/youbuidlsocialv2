@@ -60,6 +60,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         throw new Error("Orbis not initialized");
       }
 
+      // First check if already connected
+      const { status: isConnected } = await orbis.isConnected();
+      if (isConnected) {
+        setIsInitialized(true);
+        return true;
+      }
+
       const provider = getEthereumProvider();
       if (provider && isConnected) {
         const res = await orbis.connect_v2({
@@ -81,21 +88,24 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const fetchNotifications = async () => {
     try {
-      if (!isInitialized && isConnected) {
-        const initialized = await initializeOrbis();
-        if (!initialized) return [];
+      if (!isConnected) {
+        return [];
       }
 
-      if (!isInitialized) return [];
+      // Always ensure connection before fetching
+      const isOrbisReady = await initializeOrbis();
+      if (!isOrbisReady) {
+        return [];
+      }
 
-      const result = await orbis.getNotifications();
+      const { data, status } = await orbis.getNotifications();
       
-      if (!result || !result.data) {
+      if (!status || !data) {
         throw new Error("Failed to fetch notifications");
       }
 
       // Process notifications
-      const notificationsData = Array.isArray(result.data) ? result.data : [];
+      const notificationsData = Array.isArray(data) ? data : [];
       const formattedNotifications = notificationsData.map(notification => {
         let type = notification.type || "system";
         let content = "";
@@ -162,20 +172,29 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }, []);
 
   useEffect(() => {
-    if (mounted && isConnected) {
-      initializeOrbis().then(() => {
-        fetchNotifications();
-      });
-    }
+    let pollInterval: NodeJS.Timeout;
 
-    const pollInterval = setInterval(() => {
-      if (isInitialized && isConnected) {
-        fetchNotifications();
+    const setupNotifications = async () => {
+      if (mounted && isConnected) {
+        await initializeOrbis();
+        await fetchNotifications();
+
+        pollInterval = setInterval(async () => {
+          if (isConnected) {
+            await fetchNotifications();
+          }
+        }, 30000);
       }
-    }, 30000);
+    };
 
-    return () => clearInterval(pollInterval);
-  }, [mounted, isConnected, isInitialized]);
+    setupNotifications();
+
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
+  }, [mounted, isConnected]);
 
   const unreadCount = notifications.filter(n => n.isNew).length;
 
@@ -250,6 +269,9 @@ export function useNotifications() {
   const context = useContext(NotificationContext);
   return context;
 }
+
+
+
 
 
 

@@ -25,6 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { use } from 'react';
 import { WithdrawDonations } from '@/components/WithdrawDonations';
 
+
 // Add interface for post type
 interface Post {
   id: string;
@@ -77,7 +78,7 @@ export default function ProfilePage({ params }: { params: { address: string } })
 
   useEffect(() => {
     if (mounted && address) {
-      getUserPosts(address); // This will now fetch only the user's posts
+      getUserPosts(address);
     }
   }, [mounted, address, getUserPosts]);
 
@@ -304,6 +305,7 @@ function ProfileLoadingState() {
     </MainLayout>
   );
 }
+
 
 
 

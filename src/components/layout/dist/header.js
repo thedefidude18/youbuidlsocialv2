@@ -6,11 +6,11 @@ var link_1 = require("next/link");
 var navigation_1 = require("next/navigation");
 var button_1 = require("@/components/ui/button");
 var theme_toggle_1 = require("@/components/theme-toggle");
-var wallet_connect_button_1 = require("@/components/wallet-connect-button");
 var points_provider_1 = require("@/providers/points-provider");
 var auth_provider_1 = require("@/providers/auth-provider");
 var lucide_react_1 = require("lucide-react");
 var input_1 = require("@/components/ui/input");
+var login_button_1 = require("@/components/login-button");
 function Header() {
     var _a = points_provider_1.usePoints(), points = _a.points, level = _a.level;
     var user = auth_provider_1.useAuth().user;
@@ -41,6 +41,6 @@ function Header() {
                     React.createElement(button_1.Button, { variant: "ghost", size: "icon" },
                         React.createElement(lucide_react_1.Github, { className: "h-5 w-5" }))),
                 React.createElement(theme_toggle_1.ThemeToggle, null),
-                React.createElement(wallet_connect_button_1.WalletConnectButton, { size: "sm", variant: "outline", className: "!h-9 min-w-[120px]" })))));
+                React.createElement(login_button_1.LoginButton, null)))));
 }
 exports.Header = Header;

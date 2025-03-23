@@ -1,16 +1,21 @@
-"use client";
+'use client';
 
+import React from 'react';
+import type { ReactNode } from 'react';
 import { Header } from "./header";
 import { Sidebar } from "./sidebar";
 import { RightSidebar } from "./right-sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 interface MainLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
   showHeader?: boolean;
 }
 
-export function MainLayout({ children, showHeader = true }: MainLayoutProps) {
+export const MainLayout: React.FC<MainLayoutProps> = ({
+  children,
+  showHeader = true
+}) => {
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-background">
@@ -53,7 +58,10 @@ export function MainLayout({ children, showHeader = true }: MainLayoutProps) {
       </div>
     </TooltipProvider>
   );
-}
+};
+
+export default MainLayout;
+
 
 
 
