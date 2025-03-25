@@ -81,9 +81,18 @@ export function usePostInteractions(postId: string) {
 
     try {
       setIsProcessing(true);
+      // First fetch the original post to get its content
+      const { data: originalPost } = await orbis.getPost(postId);
+      
+      if (!originalPost) {
+        throw new Error('Original post not found');
+      }
+
       const result = await orbis.createPost({
         context: 'youbuidl:repost',
-        master: postId
+        body: originalPost.content.body, // Include the original post content
+        master: postId,
+        repost: true // Flag to indicate this is a repost
       });
 
       if (!result || result.status !== 200) {
@@ -95,7 +104,7 @@ export function usePostInteractions(postId: string) {
         ...post,
         stats: {
           ...post.stats,
-          reposts: post.stats.reposts + 1
+          reposts: (post.stats?.reposts || 0) + 1
         }
       }));
 
@@ -242,6 +251,7 @@ export function usePostInteractions(postId: string) {
     isProcessing
   };
 }
+
 
 
 

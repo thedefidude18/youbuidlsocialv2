@@ -1,7 +1,9 @@
+'use client';
+
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useState } from 'react';
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
 import { useAccount, useContractWrite, useWaitForTransactionReceipt } from 'wagmi';
 import { parseEther } from 'viem';
@@ -14,27 +16,32 @@ const TOKENS = [
   { symbol: 'ETH', name: 'Ethereum', icon: '⟠', decimals: 18 },
   { symbol: 'USDT', name: 'Tether USD', icon: '₮', decimals: 6 },
   { symbol: 'OP', name: 'Optimism', icon: '⚡', decimals: 18 }
-];
+] as const;
+
+type Token = typeof TOKENS[number];
 
 export function DonateModal({ isOpen, onClose, author, streamId, postExcerpt }) {
-  const { address } = useAccount();
+  const { address, isConnected } = useAccount();
   const { toast } = useToast();
-  const [amount, setAmount] = useState('');
-  const [token, setToken] = useState(TOKENS[0]);
+  const [amount, setAmount] = useState('0.01');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [token, setToken] = useState<Token>(TOKENS[0]); // Add token state
 
   const contractAddress = process.env.NEXT_PUBLIC_DONATION_CONTRACT_ADDRESS;
 
-  // Add this console.log to debug
-  console.log('Contract Address:', contractAddress);
-  console.log('User Address:', address);
-
-  const { write: donateETH, data: donationData } = useContractWrite({
+  const { 
+    write: donateETH,
+    data: donationData,
+    isError: isWriteError,
+    error: writeError,
+    isLoading: isWriteLoading
+  } = useContractWrite({
     address: contractAddress as `0x${string}`,
     abi: donationContractABI,
     functionName: 'donateETH',
     onError: (error) => {
       console.error('Contract write error:', error);
+      setIsProcessing(false);
       toast({
         title: 'Error',
         description: error.message,
@@ -49,7 +56,7 @@ export function DonateModal({ isOpen, onClose, author, streamId, postExcerpt }) 
       setIsProcessing(false);
       toast({ 
         title: 'Donation successful!', 
-        description: `You donated ${amount} ${token.symbol} to ${author.name}` 
+        description: `You donated ${amount} ETH to ${author.name}` 
       });
       onClose();
     },
@@ -64,7 +71,7 @@ export function DonateModal({ isOpen, onClose, author, streamId, postExcerpt }) 
   });
 
   const handleDonate = async () => {
-    if (!address) {
+    if (!isConnected) {
       toast({ 
         title: 'Connect Wallet', 
         description: 'Please connect your wallet to donate.', 
@@ -94,22 +101,18 @@ export function DonateModal({ isOpen, onClose, author, streamId, postExcerpt }) 
     try {
       setIsProcessing(true);
       
-      if (token.symbol === 'ETH') {
-        donateETH?.({
-          args: [streamId],
-          value: parseEther(amount),
-        });
-      } else {
-        throw new Error('Only ETH donations are currently supported');
-      }
+      donateETH({
+        args: [streamId],
+        value: parseEther(amount),
+      });
 
     } catch (error) {
       console.error('Donation error:', error);
       setIsProcessing(false);
-      toast({ 
-        title: 'Error', 
-        description: error instanceof Error ? error.message : 'Failed to process donation.', 
-        variant: 'destructive' 
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to process donation.',
+        variant: 'destructive'
       });
     }
   };
@@ -134,7 +137,13 @@ export function DonateModal({ isOpen, onClose, author, streamId, postExcerpt }) 
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Select Token</label>
-            <Select value={token.symbol} onValueChange={(value) => setToken(TOKENS.find(t => t.symbol === value))}>
+            <Select 
+              value={token.symbol} 
+              onValueChange={(value) => {
+                const newToken = TOKENS.find(t => t.symbol === value);
+                if (newToken) setToken(newToken);
+              }}
+            >
               <SelectTrigger className="w-full mt-1">
                 <SelectValue placeholder="Select token" />
               </SelectTrigger>
@@ -150,7 +159,7 @@ export function DonateModal({ isOpen, onClose, author, streamId, postExcerpt }) 
           </div>
           <Input
             type="number"
-            placeholder="Amount in ETH"
+            placeholder={`Amount in ${token.symbol}`}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             disabled={isProcessing}
@@ -164,7 +173,7 @@ export function DonateModal({ isOpen, onClose, author, streamId, postExcerpt }) 
                 onClick={() => setAmount(preset)}
                 disabled={isProcessing}
               >
-                {preset} ETH
+                {preset} {token.symbol}
               </Button>
             ))}
           </div>
@@ -179,7 +188,7 @@ export function DonateModal({ isOpen, onClose, author, streamId, postExcerpt }) 
                 Processing...
               </>
             ) : (
-              `Donate ${amount || '0'} ETH`
+              `Donate ${amount || '0'} ${token.symbol}`
             )}
           </Button>
         </div>
@@ -187,18 +196,6 @@ export function DonateModal({ isOpen, onClose, author, streamId, postExcerpt }) 
     </Dialog>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

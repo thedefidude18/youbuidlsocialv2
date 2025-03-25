@@ -89,9 +89,12 @@ export function PostCard({ post }: PostCardProps) {
     if (isProcessing) return;
     try {
       await like();
-      setIsLiked(!isLiked);
-      setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
-      if (!isLiked) {
+      const newLikedState = !isLiked;
+      setIsLiked(newLikedState);
+      setLikeCount(prev => newLikedState ? prev + 1 : prev - 1);
+      
+      // Only show notification and add points when liking, not when unliking
+      if (newLikedState) {
         await actions.addLike();
         toast({
           title: "Post liked",
@@ -111,20 +114,23 @@ export function PostCard({ post }: PostCardProps) {
     if (isProcessing) return;
     
     try {
-      await repost();
-      setIsReposted(!isReposted);
-      setRepostCount(prev => isReposted ? prev - 1 : prev + 1);
-      
-      if (!isReposted) {
-        toast({
-          title: "Post reposted",
-          description: "Content shared to your feed"
-        });
+      const success = await repost();
+      if (success) {
+        setIsReposted(!isReposted);
+        setRepostCount(prev => isReposted ? prev - 1 : prev + 1);
+        
+        if (!isReposted) {
+          toast({
+            title: "Post reposted",
+            description: "Content shared to your feed"
+          });
+        }
       }
     } catch (error) {
+      console.error('Repost error:', error);
       toast({
         title: "Error",
-        description: "Could not process repost action",
+        description: error instanceof Error ? error.message : "Could not process repost action",
         variant: "destructive"
       });
     }
@@ -318,11 +324,6 @@ export function PostCard({ post }: PostCardProps) {
 
         {/* Post Stats */}
         <div className="px-4 py-2 flex items-center space-x-4 text-sm text-zinc-500">
-          <span>{formatPostDate(post.timestamp)}</span>
-          <span>·</span>
-          <span>{likeCount} likes</span>
-          <span>·</span>
-          <span>{commentCount} comments</span>
         </div>
 
         {/* Actions */}
@@ -337,7 +338,7 @@ export function PostCard({ post }: PostCardProps) {
               onClick={handleLike}
             >
               <Heart className={cn("w-5 h-5", isLiked && "fill-current")} />
-              <span>Like</span>
+              <span>{likeCount}</span>
             </Button>
             
             <Button 
@@ -349,7 +350,7 @@ export function PostCard({ post }: PostCardProps) {
               onClick={handleCommentClick}
             >
               <MessageCircle className="w-5 h-5" />
-              <span>Comment</span>
+              <span> {commentCount}</span>
             </Button>
             
             <Button 
@@ -361,7 +362,7 @@ export function PostCard({ post }: PostCardProps) {
               onClick={handleRepost}
             >
               <Repeat2 className="w-5 h-5" />
-              <span>Share</span>
+              <span></span>
             </Button>
           </div>
         </div>
@@ -512,20 +513,6 @@ export function PointsLeaderboard() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -35,7 +35,7 @@ export function Header() {
             </Button>
           ) : (
             <Link href="/" className="flex items-center gap-2">
-              <img src="/youlogo.svg" alt="Logo" className="h-6 w-6" />
+              <img src="youlogo.svg" alt="Logo" className="h-6 w-6" />
               <span className="font-semibold"></span>
             </Link>
           )}
