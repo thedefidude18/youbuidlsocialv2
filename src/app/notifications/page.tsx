@@ -6,28 +6,32 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useNotifications } from "@/components/notification-provider";
-import { Loader2 } from "lucide-react";
+import { formatAmount, getNotificationIcon, getNotificationColor } from "@/lib/notifications";
 
 type NotificationType = "all" | "mentions" | "likes" | "recasts" | "follows" | 
                        "donations" | "points" | "withdrawals";
 
 export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState<NotificationType>("all");
-  const { notifications, unreadCount, markAsRead, markAllAsRead, fetchNotifications } = useNotifications();
+  const { 
+    notifications, 
+    unreadCount, 
+    markAsRead, 
+    markAllAsRead, 
+    fetchNotifications,
+    error 
+  } = useNotifications();
   const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadNotifications = async () => {
       try {
         setIsLoading(true);
-        setError(null);
         await fetchNotifications();
-      } catch (err) {
-        setError((err as Error).message || 'Failed to load notifications');
       } finally {
         setIsLoading(false);
         setMounted(true);
@@ -54,13 +58,8 @@ export default function NotificationsPage() {
   if (!mounted || isLoading) {
     return (
       <MainLayout>
-        <div className="flex-1 min-h-0 flex flex-col pb-16 md:pb-0">
-          <div className="border-b border-border p-4">
-            <h1 className="text-xl font-bold">Notifications</h1>
-          </div>
-          <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </MainLayout>
     );
@@ -69,21 +68,14 @@ export default function NotificationsPage() {
   if (error) {
     return (
       <MainLayout>
-        <div className="flex-1 min-h-0 flex flex-col pb-16 md:pb-0">
-          <div className="border-b border-border p-4">
-            <h1 className="text-xl font-bold">Notifications</h1>
-          </div>
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-destructive text-center">
-              <p>Failed to load notifications</p>
-              <button 
-                onClick={() => fetchNotifications()}
-                className="mt-2 text-sm text-primary hover:underline"
-              >
-                Try again
-              </button>
-            </div>
-          </div>
+        <div className="m-4 p-4 border border-destructive/50 rounded-lg bg-destructive/10 text-destructive">
+          <p className="text-sm">{error}</p>
+          <button 
+            onClick={() => fetchNotifications()} 
+            className="mt-2 text-sm text-primary hover:underline"
+          >
+            Try again
+          </button>
         </div>
       </MainLayout>
     );
@@ -176,29 +168,38 @@ export default function NotificationsPage() {
                 {filteredNotifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`p-4 ${notification.isNew ? 'bg-primary/5 dark:bg-primary/10' : ''}`}
+                    className={`p-4 ${
+                      notification.isNew ? 'bg-primary/5 dark:bg-primary/10' : ''
+                    } hover:bg-muted/50 transition-colors`}
                     onClick={() => markAsRead(notification.id)}
                   >
                     <div className="flex gap-3">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={notification.user.avatar} alt={notification.user.name} />
-                        <AvatarFallback>{notification.user.name.charAt(0)}</AvatarFallback>
+                        <AvatarImage 
+                          src={notification.user.avatar} 
+                          alt={notification.user.name} 
+                        />
+                        <AvatarFallback>
+                          {notification.user.name.charAt(0)}
+                        </AvatarFallback>
                       </Avatar>
 
                       <div className="flex-1">
                         <div className="flex items-center gap-1 flex-wrap">
-                          <Link href={`/profile/${notification.user.username}`} className="font-semibold hover:underline">
+                          <Link 
+                            href={`/profile/${notification.user.username}`} 
+                            className="font-semibold hover:underline"
+                          >
                             {notification.user.name}
                           </Link>
 
                           {notification.user.verified && (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-primary">
-                              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                              <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                            </svg>
+                            <Badge variant="outline" className="bg-primary/10">
+                              Verified
+                            </Badge>
                           )}
 
-                          <span className="text-muted-foreground">
+                          <span className={`${getNotificationColor(notification.type, notification.status)}`}>
                             {notification.content}
                           </span>
 
@@ -297,6 +298,8 @@ export default function NotificationsPage() {
     </MainLayout>
   );
 }
+
+
 
 
 

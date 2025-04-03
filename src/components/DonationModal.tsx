@@ -1,105 +1,240 @@
 'use client';
 
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { useAccount, useContractWrite, useWaitForTransaction } from 'wagmi';
-import { parseEther } from 'viem';
-import { donationContractABI } from '@/contracts/DonationContract';
-import { useToast } from './ui/use-toast';
+import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
+import { useAccount } from 'wagmi';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, Wallet, Star } from 'lucide-react';
+import { DonationSDK } from '@/lib/donation-sdk';
+import { Separator } from './ui/separator';
+import { Badge } from './ui/badge';
 
 interface DonationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  author: {
+    name: string;
+    address: string;
+    avatar?: string;
+  };
   streamId: string;
-  authorAddress: string;
+  postExcerpt?: string;
+  projectConfig: {
+    id: string;
+    name: string;
+    recipients: {
+      address: string;
+      chainId: number;
+      share: number;
+    }[];
+    theme: {
+      primaryColor: string;
+      buttonStyle: string;
+      size: string;
+      darkMode: boolean;
+    };
+  };
 }
 
-export function DonationModal({ streamId, authorAddress }: DonationModalProps) {
+export function DonationModal({
+  isOpen,
+  onClose,
+  author,
+  streamId,
+  postExcerpt,
+  projectConfig
+}: DonationModalProps) {
   const [amount, setAmount] = useState('');
-  const { address } = useAccount();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { address, isConnected } = useAccount();
   const { toast } = useToast();
-
-  const { write: donateETH, data: donationData } = useContractWrite({
-    address: process.env.NEXT_PUBLIC_DONATION_CONTRACT_ADDRESS as `0x${string}`,
-    abi: donationContractABI,
-    functionName: 'donateETH',
-    args: [streamId],
-    value: amount ? parseEther(amount) : 0n,
+  const donationSDK = new DonationSDK({
+    projectId: projectConfig.id,
+    chainId: projectConfig.recipients[0].chainId
   });
+  const MIN_DONATION = '0.0001';
 
-  const { isLoading } = useWaitForTransaction({
-    hash: donationData?.hash,
-    onSuccess: () => {
-      toast({
-        title: 'Donation successful!',
-        description: `You donated ${amount} ETH to ${authorAddress}`,
-      });
-      setAmount('');
-    },
-  });
+  const DONATION_POINTS = 15; // You can adjust this value or make it dynamic based on amount
 
-  const handleDonate = () => {
-    if (!address) {
+  const handleDonate = async () => {
+    if (!isConnected) {
       toast({
         title: 'Connect Wallet',
         description: 'Please connect your wallet to donate.',
-        variant: 'destructive',
+        variant: 'destructive'
       });
       return;
     }
 
-    if (!amount || parseFloat(amount) <= 0) {
+    if (!streamId) {
+      toast({
+        title: 'Invalid Stream',
+        description: 'Stream ID is required for donation',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!amount || parseFloat(amount) < parseFloat(MIN_DONATION)) {
       toast({
         title: 'Invalid amount',
-        description: 'Please enter a valid amount.',
-        variant: 'destructive',
+        description: `Minimum donation is ${MIN_DONATION} ETH`,
+        variant: 'destructive'
       });
       return;
     }
 
     try {
-      donateETH?.();
+      setIsProcessing(true);
+      console.log('Attempting donation with:', {
+        amount,
+        streamId,
+        recipient: author.address
+      });
+      
+      await donationSDK.donate({
+        recipient: author.address,
+        amount,
+        streamId: streamId.toString(),
+        metadata: {
+          postExcerpt,
+          authorName: author.name
+        }
+      });
+
+      toast({
+        title: 'Donation successful!',
+        description: `Thank you for supporting ${author.name}!`
+      });
+      onClose();
     } catch (error) {
+      console.error('Donation error:', error);
       toast({
         title: 'Error',
-        description: 'Failed to process donation.',
-        variant: 'destructive',
+        description: error instanceof Error ? error.message : 'Failed to process donation',
+        variant: 'destructive'
       });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
+  const displayAddress = author.address && author.address !== '0x' 
+    ? `${author.address.slice(0, 6)}...${author.address.slice(-4)}`
+    : 'Address not available';
+
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          Donate
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Support this cast</DialogTitle>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-sm p-6">
+        <DialogHeader className="flex flex-col items-center space-y-3">
+          <Avatar className="w-16 h-16 ring-2 ring-purple-500">
+            <AvatarImage src={author.avatar} alt={author.name} />
+            <AvatarFallback>{author.name[0]}</AvatarFallback>
+          </Avatar>
+          <div className="text-center">
+            <DialogTitle className="text-xl font-semibold">
+              Support {author.name}
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Project: {projectConfig.name}
+            </p>
+            <div className="mt-2">
+              <Badge 
+                variant="secondary" 
+                className="inline-flex items-center gap-1.5 px-3 py-1.5"
+              >
+                <Star className="w-4 h-4 text-yellow-500" />
+                <span>Earn 15 Points</span>
+              </Badge>
+            </div>
+          </div>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
+
+        <Separator className="my-4" />
+
+        {postExcerpt && (
+          <div className="bg-muted/50 p-4 rounded-lg text-sm mb-6">
+            <p className="text-xs text-muted-foreground mb-2">From post:</p>
+            <p className="line-clamp-3">{postExcerpt}</p>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              Amount (ETH)
+            </label>
             <Input
-              id="amount"
               type="number"
-              step="0.0001"
-              placeholder="Amount in ETH"
+              placeholder="0.01"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="col-span-4"
+              disabled={isProcessing}
+              className="text-lg"
+              min={MIN_DONATION}
+              step={MIN_DONATION}
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Minimum donation: {MIN_DONATION} ETH
+            </p>
           </div>
-          <Button
-            onClick={handleDonate}
-            disabled={isLoading}
-            className="w-full"
+
+          <div className="flex gap-2 justify-center">
+            {['0.01', '0.05', '0.1'].map((preset) => (
+              <Button
+                key={preset}
+                variant="outline"
+                size="sm"
+                onClick={() => setAmount(preset)}
+                disabled={isProcessing}
+              >
+                {preset} ETH
+              </Button>
+            ))}
+          </div>
+
+          <Button 
+            className="w-full h-12 text-base"
+            onClick={handleDonate} 
+            disabled={isProcessing || !isConnected || !author.address || author.address === '0x'}
+            style={{
+              backgroundColor: projectConfig.theme.primaryColor,
+              borderRadius: projectConfig.theme.buttonStyle === 'rounded' ? '9999px' : '0.5rem'
+            }}
           >
-            {isLoading ? 'Processing...' : 'Send Donation'}
+            {isProcessing ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Processing...
+              </>
+            ) : !author.address || author.address === '0x' ? (
+              'Recipient address not available'
+            ) : !isConnected ? (
+              'Connect Wallet to Donate'
+            ) : (
+              <>
+                <Wallet className="mr-2 h-5 w-5" />
+                Donate {amount ? `${amount} ETH` : ''}
+              </>
+            )}
           </Button>
+
+          <div className="text-center space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Recipient address: {displayAddress}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Points will be credited after the transaction is confirmed
+            </p>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
+
+
+

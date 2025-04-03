@@ -25,8 +25,8 @@ export function MobileNav() {
 
   const navItems = [
     {
-      name: "Explore",
-      href: "/",
+      name: "Feed",
+      href: "/feed",
       icon: <HomeIcon className="h-6 w-6" />,
     },
     {
@@ -36,7 +36,7 @@ export function MobileNav() {
     },
     {
       name: "Rank",
-      href: "leaderboard",
+      href: "/leaderboard",
       icon: <WarpcastIcon className="h-6 w-6" />,
       primary: true
     },

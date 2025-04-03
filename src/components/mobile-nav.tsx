@@ -40,14 +40,14 @@ export function MobileNav() {
         </Button>
       </Link>
 
-      {/* Existing Navigation */}
+      {/* Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background md:hidden">
         <div className="flex items-center justify-around">
           <Link 
-            href="/" 
+            href="/feed" 
             className={cn(
               "flex flex-col items-center justify-center flex-1 h-full p-4 text-sm",
-              pathname === '/' ? 'text-primary' : 'text-muted-foreground'
+              pathname === '/feed' ? 'text-primary' : 'text-muted-foreground'
             )}
           >
             <Home className="w-5 h-5" />
@@ -110,6 +110,7 @@ export function MobileNav() {
     </>
   );
 }
+
 
 
 

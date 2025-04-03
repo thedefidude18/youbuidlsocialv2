@@ -5,6 +5,7 @@ import { orbis } from "@/lib/orbis";
 import type { NotificationItem } from '@/types/notification';
 import { getEthereumProvider } from "@/utils/wallet";
 import { useAccount } from 'wagmi';
+import { playNotificationSound, requestNotificationPermission, showBrowserNotification } from "@/lib/notifications";
 
 interface NotificationItem {
   id: string;
@@ -52,6 +53,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [mounted, setMounted] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isPermissionGranted, setIsPermissionGranted] = useState(false);
   const { isConnected } = useAccount();
 
   const initializeOrbis = async () => {
@@ -82,7 +85,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       return false;
     } catch (error) {
       console.error("Failed to initialize Orbis:", error);
+      setError("Failed to initialize notification system");
       return false;
+    }
+  };
+
+  const handleNewNotification = (notification: NotificationItem) => {
+    setNotifications(prev => [notification, ...prev]);
+    
+    if (notification.isNew) {
+      playNotificationSound();
+      if (isPermissionGranted) {
+        showBrowserNotification(notification);
+      }
     }
   };
 
@@ -158,19 +173,29 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       });
 
       setNotifications(formattedNotifications);
+      setError(null);
       return formattedNotifications;
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
+      setError("Failed to fetch notifications");
       return [];
     }
   };
 
+  // Initialize notification permissions
   useEffect(() => {
+    const initializePermissions = async () => {
+      const granted = await requestNotificationPermission();
+      setIsPermissionGranted(granted);
+    };
+
     if (!mounted) {
       setMounted(true);
+      initializePermissions();
     }
   }, []);
 
+  // Setup polling for notifications
   useEffect(() => {
     let pollInterval: NodeJS.Timeout;
 
@@ -181,9 +206,17 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
         pollInterval = setInterval(async () => {
           if (isConnected) {
-            await fetchNotifications();
+            const newNotifications = await fetchNotifications();
+            const currentIds = new Set(notifications.map(n => n.id));
+            
+            // Check for new notifications
+            newNotifications.forEach(notification => {
+              if (!currentIds.has(notification.id) && notification.isNew) {
+                handleNewNotification(notification);
+              }
+            });
           }
-        }, 30000);
+        }, 30000); // Poll every 30 seconds
       }
     };
 
@@ -248,18 +281,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     setNotifications([]);
   };
 
+  const value = {
+    notifications,
+    unreadCount,
+    addNotification: handleNewNotification,
+    markAsRead,
+    markAllAsRead,
+    clearNotifications,
+    fetchNotifications,
+    error
+  };
+
   return (
-    <NotificationContext.Provider
-      value={{
-        notifications,
-        unreadCount,
-        addNotification,
-        markAsRead,
-        markAllAsRead,
-        clearNotifications,
-        fetchNotifications,
-      }}
-    >
+    <NotificationContext.Provider value={value}>
       {children}
     </NotificationContext.Provider>
   );

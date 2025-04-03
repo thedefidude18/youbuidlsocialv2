@@ -49,19 +49,31 @@ function TopPost({ post }: { post: any }) {
 export function RightSidebar() {
   const [mounted, setMounted] = useState(false);
   const [topEarners, setTopEarners] = useState<PointsEarner[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { posts, loading, refreshPosts } = usePosts();
 
   useEffect(() => {
-    setMounted(true);
-    const leaderboard = getLeaderboard(5);
-    setTopEarners(leaderboard.map(user => ({
-      id: user.userId,
-      name: formatAddress(user.userId),
-      username: formatAddress(user.userId),
-      avatar: `https://api.dicebear.com/7.x/avatars/svg?seed=${user.userId}`,
-      points: user.points,
-      level: user.level
-    })));
+    async function fetchTopEarners() {
+      setMounted(true);
+      setIsLoading(true);
+      try {
+        const leaderboard = await getLeaderboard(5);
+        setTopEarners(leaderboard.map(user => ({
+          id: user.userId,
+          name: formatAddress(user.userId),
+          username: formatAddress(user.userId),
+          avatar: `https://api.dicebear.com/7.x/avatars/svg?seed=${user.userId}`,
+          points: user.points,
+          level: user.level
+        })));
+      } catch (error) {
+        console.error('Error fetching top earners:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchTopEarners();
   }, []);
 
   useEffect(() => {

@@ -1,7 +1,7 @@
 import type { DonationContractConfig } from '@/contracts/types';
 import DonationContractJson from '@/contracts/DonationContract.json';
 
-export const DONATION_CONTRACT_ADDRESS = "0x31a785DCF8ED15FF30Cb2170066D0a44277B0625";
+export const DONATION_CONTRACT_ADDRESS = "0x94207105ab27a2b3eebeab7fa0c60ab674c77883";
 export const DONATION_CONTRACT_CONFIG: DonationContractConfig = {
   ...DonationContractJson,
   address: DONATION_CONTRACT_ADDRESS

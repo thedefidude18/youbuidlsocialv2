@@ -33,12 +33,11 @@ export function Header() {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-          ) : (
-            <Link href="/" className="flex items-center gap-2">
-              <img src="youlogo.svg" alt="Logo" className="h-6 w-6" />
-              <span className="font-semibold"></span>
-            </Link>
-          )}
+          ) : null}
+          <Link href="/" className="flex items-center gap-2">
+            <img src="/youlogo.svg" alt="Logo" className="h-6 w-6" />
+            <span className="font-semibold">youBuidl</span>
+          </Link>
         </div>
 
         {/* Points display - mobile only */}
@@ -82,9 +81,6 @@ export function Header() {
     </header>
   );
 }
-
-
-
 
 
 

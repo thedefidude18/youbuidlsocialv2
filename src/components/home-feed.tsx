@@ -13,7 +13,6 @@ export function HomeFeed() {
   const { posts, setPosts, loading, setLoading, error, setError } = usePostsStore();
   const { createPost, isSubmitting } = useCreatePost();
   const { authenticated } = usePrivy();
-  // Remove mounted state since it's not necessary with 'use client'
   
   const fetchPosts = useCallback(async () => {
     if (loading) return;
@@ -62,9 +61,6 @@ export function HomeFeed() {
     }
   }, [loading, setLoading, setError, setPosts]);
 
-  // Remove mounted initialization effect
-  
-  // Fetch posts when component mounts
   useEffect(() => {
     fetchPosts();
   }, [fetchPosts]);
@@ -83,9 +79,9 @@ export function HomeFeed() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      {/* Show compose box on both mobile and desktop */}
+      {/* Show compose box only on desktop */}
       {authenticated && (
-        <div className="sticky top-0 z-10 bg-background border-b border-border p-4">
+        <div className="hidden md:block sticky top-0 z-10 bg-background border-b border-border p-4">
           <ComposeBox onSubmit={handleCreatePost} isSubmitting={isSubmitting} />
         </div>
       )}

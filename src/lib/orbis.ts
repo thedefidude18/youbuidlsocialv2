@@ -7,6 +7,36 @@ export const orbis = new Orbis({
     CERAMIC_NODE: "https://node2.orbis.club"
 });
 
+// Initialize Orbis connection
+export const initializeOrbis = async () => {
+  try {
+    const res = await orbis.isConnected();
+    
+    if (!res || !res.status) {
+      console.log('Connecting to Orbis...');
+      const connectRes = await orbis.connect();
+      
+      if (!connectRes.status) {
+        throw new Error('Failed to connect to Orbis');
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error initializing Orbis:', error);
+    return false;
+  }
+};
+
+// Ensure connection before making requests
+export const ensureOrbisConnection = async () => {
+  const res = await orbis.isConnected();
+  if (!res || !res.status) {
+    return initializeOrbis();
+  }
+  return true;
+};
+
 export interface OrbisPost {
     stream_id: string;
     content: {

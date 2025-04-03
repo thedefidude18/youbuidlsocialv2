@@ -33,33 +33,45 @@ export function usePosts() {
         throw new Error('Orbis client not initialized');
       }
 
-      const result = await orbis.getPosts({
+      const { data, error: orbisError } = await orbis.getPosts({
         context: 'youbuidl:post'
       });
 
-      if (!result || !result.data) {
-        throw new Error('Invalid response from Orbis');
+      if (orbisError) {
+        throw new Error(`Orbis error: ${orbisError}`);
       }
 
-      const transformedPosts = result.data.map(post => ({
-        id: post.stream_id,
-        content: post.content?.body || '',
-        author: {
-          id: post.creator,
-          name: post.creator_details?.profile?.username || 
-               post.creator?.slice(0, 6) + '...' + post.creator?.slice(-4),
-          username: post.creator_details?.profile?.username || post.creator,
-          avatar: post.creator_details?.profile?.pfp || 
-                 `https://api.dicebear.com/9.x/bottts/svg?seed=${post.creator}`,
-          verified: false
-        },
-        timestamp: new Date(post.timestamp * 1000).toISOString(),
-        stats: {
-          likes: post.count_likes || 0,
-          comments: post.count_replies || 0,
-          reposts: post.count_haha || 0
+      if (!Array.isArray(data)) {
+        console.error('Unexpected Orbis response:', data);
+        throw new Error('Invalid response format from Orbis');
+      }
+
+      const transformedPosts = data.map(post => {
+        if (!post || typeof post !== 'object') {
+          console.warn('Invalid post data:', post);
+          return null;
         }
-      }));
+
+        return {
+          id: post.stream_id || '',
+          content: post.content?.body || '',
+          author: {
+            id: post.creator || '',
+            name: post.creator_details?.profile?.username || 
+                 (post.creator ? `${post.creator.slice(0, 6)}...${post.creator.slice(-4)}` : ''),
+            username: post.creator_details?.profile?.username || post.creator || '',
+            avatar: post.creator_details?.profile?.pfp || 
+                   `https://api.dicebear.com/9.x/bottts/svg?seed=${post.creator || 'default'}`,
+            verified: false
+          },
+          timestamp: post.timestamp ? new Date(post.timestamp * 1000).toISOString() : new Date().toISOString(),
+          stats: {
+            likes: Number(post.count_likes) || 0,
+            comments: Number(post.count_replies) || 0,
+            reposts: Number(post.count_haha) || 0
+          }
+        };
+      }).filter((post): post is Post => post !== null);
       
       const sortedPosts = transformedPosts.sort((a, b) => 
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
@@ -84,16 +96,41 @@ export function usePosts() {
         throw new Error('Orbis client not initialized');
       }
 
-      const result = await orbis.getPosts({
+      const { data, error: orbisError } = await orbis.getPosts({
         context: 'youbuidl:post',
-        did: userAddress // Filter posts by user's DID/address
+        did: userAddress
       });
 
-      if (!result || !result.data) {
-        throw new Error('Invalid response from Orbis');
+      if (orbisError) {
+        throw new Error(`Orbis error: ${orbisError}`);
       }
 
-      const transformedPosts = result.data.map(transformPost);
+      if (!Array.isArray(data)) {
+        console.error('Unexpected Orbis response:', data);
+        throw new Error('Invalid response format from Orbis');
+      }
+
+      const transformedPosts = data
+        .filter(post => post && typeof post === 'object')
+        .map(post => ({
+          id: post.stream_id || '',
+          content: post.content?.body || '',
+          author: {
+            id: post.creator || '',
+            name: post.creator_details?.profile?.username || 
+                 (post.creator ? `${post.creator.slice(0, 6)}...${post.creator.slice(-4)}` : ''),
+            username: post.creator_details?.profile?.username || post.creator || '',
+            avatar: post.creator_details?.profile?.pfp || 
+                   `https://api.dicebear.com/9.x/bottts/svg?seed=${post.creator || 'default'}`,
+            verified: false
+          },
+          timestamp: post.timestamp ? new Date(post.timestamp * 1000).toISOString() : new Date().toISOString(),
+          stats: {
+            likes: Number(post.count_likes) || 0,
+            comments: Number(post.count_replies) || 0,
+            reposts: Number(post.count_haha) || 0
+          }
+        }));
       
       const sortedPosts = transformedPosts.sort((a, b) => 
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()

@@ -24,7 +24,7 @@ type RankedUser = {
   username: string;
   avatar: string;
   posts: number;
-  donations: string; // in USD
+  donations: string;
   isFollowing: boolean;
 };
 
@@ -32,6 +32,7 @@ export default function LeaderboardPage() {
   const [leaderboardType, setLeaderboardType] = useState<"points" | "donations">("points");
   const [pointsLeaderboard, setPointsLeaderboard] = useState<RankedUser[]>([]);
   const [donationsLeaderboard, setDonationsLeaderboard] = useState<RankedUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const { user } = useAuth();
   const { isFollowing, toggleFollow } = useFollow();
@@ -41,35 +42,29 @@ export default function LeaderboardPage() {
     address: process.env.NEXT_PUBLIC_DONATION_CONTRACT_ADDRESS as `0x${string}`,
     abi: donationContractABI,
     functionName: 'getTopDonators',
-    args: [10], // Get top 10
-    enabled: mounted,
+    args: [10],
+    enabled: mounted, // Only enable the query when component is mounted
   });
 
-  // Initialize leaderboards on mount
-  useEffect(() => {
-    setMounted(true);
-
-    // For the points leaderboard, we'll use our real points data
-    const pointsData = getLeaderboard(10);
-    const formattedPointsLeaderboard = formatLeaderboardData(pointsData, 'points');
-    setPointsLeaderboard(formattedPointsLeaderboard);
-
-    // For donations leaderboard, format the contract data
-    if (topDonators) {
-      const formattedDonationsLeaderboard = formatLeaderboardData(topDonators, 'donations');
-      setDonationsLeaderboard(formattedDonationsLeaderboard);
+  const formatLeaderboardData = (data: any[], type: 'points' | 'donations'): RankedUser[] => {
+    if (!data || !Array.isArray(data)) {
+      console.error('Invalid data format:', data);
+      return [];
     }
-  }, [isFollowing, topDonators]);
 
-  const formatLeaderboardData = (data: any[], type: 'points' | 'donations') => {
     return data.map(entry => {
+      if (!entry?.userId) {
+        console.error('Invalid entry format:', entry);
+        return null;
+      }
+
       const username = `user_${entry.userId.substring(2, 8).toLowerCase()}`;
       const shortAddress = `${entry.userId.substring(0, 6)}...${entry.userId.substring(entry.userId.length - 4)}`;
       
       return {
         userId: entry.userId,
-        points: type === 'points' ? entry.points : 0,
-        level: entry.level || 1,
+        points: type === 'points' ? Number(entry.points) || 0 : 0,
+        level: Number(entry.level) || 1,
         name: shortAddress,
         username: username,
         avatar: `https://avatars.dicebear.com/api/identicon/${entry.userId}.svg`,
@@ -77,8 +72,73 @@ export default function LeaderboardPage() {
         donations: type === 'donations' ? formatEther(entry.amount || 0n) : "0",
         isFollowing: isFollowing(entry.userId)
       };
-    });
+    }).filter(Boolean) as RankedUser[];
   };
+
+  // Initialize mounted state
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  // Initialize leaderboards on mount
+  useEffect(() => {
+    async function fetchLeaderboards() {
+      if (!mounted) return;
+      
+      setIsLoading(true);
+      try {
+        // Fetch points leaderboard
+        const pointsData = await getLeaderboard(10);
+        console.log('Points data received:', pointsData); // Debug log
+
+        if (pointsData && Array.isArray(pointsData)) {
+          const formattedPointsLeaderboard = formatLeaderboardData(pointsData, 'points');
+          console.log('Formatted points leaderboard:', formattedPointsLeaderboard); // Debug log
+          setPointsLeaderboard(formattedPointsLeaderboard);
+        }
+
+        // Format donations leaderboard if available
+        if (topDonators) {
+          console.log('Donations data received:', topDonators); // Debug log
+          const formattedDonationsLeaderboard = formatLeaderboardData(topDonators, 'donations');
+          console.log('Formatted donations leaderboard:', formattedDonationsLeaderboard); // Debug log
+          setDonationsLeaderboard(formattedDonationsLeaderboard);
+        }
+      } catch (error) {
+        console.error('Error fetching leaderboard data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchLeaderboards();
+  }, [mounted, isFollowing, topDonators]);
+
+  // Get current leaderboard based on type
+  const getCurrentLeaderboard = () => {
+    const leaderboard = leaderboardType === "points" ? pointsLeaderboard : donationsLeaderboard;
+    console.log('Current leaderboard:', leaderboardType, leaderboard); // Debug log
+    return leaderboard;
+  };
+
+  if (!mounted || isLoading) {
+    return (
+      <MainLayout>
+        <div className="container max-w-4xl py-6">
+          <PageHeader
+            heading="Leaderboard"
+            text="Top contributors and donors in the community"
+          />
+          <div className="mt-6 space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />
+            ))}
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   // Handle follow/unfollow
   const handleToggleFollow = (userId: string) => {
@@ -98,18 +158,6 @@ export default function LeaderboardPage() {
     setDonationsLeaderboard(updateBoard);
   };
 
-  // Get current leaderboard based on type
-  const getCurrentLeaderboard = () => {
-    switch (leaderboardType) {
-      case "points":
-        return pointsLeaderboard;
-      case "donations":
-        return donationsLeaderboard;
-      default:
-        return pointsLeaderboard;
-    }
-  };
-
   return (
     <MainLayout>
       <div className="flex-1 min-h-0 flex flex-col pb-16 md:pb-0">
@@ -122,40 +170,15 @@ export default function LeaderboardPage() {
           className="w-full border-b border-border"
         >
           <TabsList className="grid w-full grid-cols-2 h-12 bg-transparent">
-            <TabsTrigger
-              value="points"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:rounded-none rounded-none h-full"
-            >
-              Points
-            </TabsTrigger>
-            <TabsTrigger
-              value="donations"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:rounded-none rounded-none h-full"
-            >
-              Donations
-            </TabsTrigger>
+            <TabsTrigger value="points">Points</TabsTrigger>
+            <TabsTrigger value="donations">Donations</TabsTrigger>
           </TabsList>
         </Tabs>
 
         {/* Leaderboard list */}
         <ScrollArea className="flex-1">
           <div className="divide-y divide-border">
-            {!mounted ? (
-              // Loading state
-              Array(5).fill(0).map((_, i) => (
-                <div key={i} className="p-4 animate-pulse flex items-center gap-4">
-                  <div className="w-8 text-center font-bold text-muted-foreground">
-                    {i + 1}
-                  </div>
-                  <div className="h-12 w-12 rounded-full bg-muted"></div>
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-muted rounded w-1/4"></div>
-                    <div className="h-3 bg-muted rounded w-1/6"></div>
-                  </div>
-                  <div className="h-8 w-20 bg-muted rounded"></div>
-                </div>
-              ))
-            ) : (
+            {getCurrentLeaderboard().length > 0 ? (
               getCurrentLeaderboard().map((user, index) => (
                 <div key={user.userId} className="p-4 flex items-center">
                   <div className="w-8 text-center font-bold text-muted-foreground">
@@ -206,11 +229,17 @@ export default function LeaderboardPage() {
                   </div>
                 </div>
               ))
-            )}
-
-            {mounted && getCurrentLeaderboard().length === 0 && (
+            ) : (
               <div className="p-8 text-center text-muted-foreground">
-                No data available yet
+                {isLoading ? (
+                  "Loading..."
+                ) : (
+                  <>
+                    No {leaderboardType} data available yet.
+                    {leaderboardType === "points" && " Start interacting with the platform to earn points!"}
+                    {leaderboardType === "donations" && " Be the first to make a donation!"}
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -219,6 +248,11 @@ export default function LeaderboardPage() {
     </MainLayout>
   );
 }
+
+
+
+
+
 
 
 

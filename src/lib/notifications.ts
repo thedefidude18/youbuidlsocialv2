@@ -41,3 +41,31 @@ export function getNotificationColor(type: string, status?: string) {
       return "text-primary";
   }
 }
+
+export const playNotificationSound = () => {
+  const audio = new Audio('/sounds/notification.mp3');
+  audio.play().catch(err => console.log('Audio playback failed:', err));
+};
+
+export const requestNotificationPermission = async () => {
+  if (!('Notification' in window)) return false;
+  
+  if (Notification.permission === 'granted') return true;
+  
+  const permission = await Notification.requestPermission();
+  return permission === 'granted';
+};
+
+export const showBrowserNotification = (notification: NotificationItem) => {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  const title = `${notification.user.name} ${notification.content}`;
+  const options = {
+    body: notification.postContent || '',
+    icon: notification.user.avatar || '/default-avatar.png',
+    badge: '/notification-badge.png',
+    tag: notification.id // Prevents duplicate notifications
+  };
+
+  new Notification(title, options);
+};

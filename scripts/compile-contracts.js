@@ -10,10 +10,10 @@ async function main() {
   // Extract the ABI and add the contract address
   const contractData = {
     abi: DonationContract.abi,
-    address: "0x31a785DCF8ED15FF30Cb2170066D0a44277B0625",
+    address: "0x94207105ab27a2b3eebeab7fa0c60ab674c77883",
     networks: {
       11155420: {
-        address: "0x31a785DCF8ED15FF30Cb2170066D0a44277B0625"
+        address: "0x94207105ab27a2b3eebeab7fa0c60ab674c77883"
       }
     }
   };
@@ -33,3 +33,4 @@ main()
     console.error(error);
     process.exit(1);
   });
+

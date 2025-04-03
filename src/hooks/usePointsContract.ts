@@ -1,39 +1,249 @@
-import { useContractRead, useContractWrite, useWaitForTransaction, useAccount } from 'wagmi';
-import pointsContractABI from '../contracts/contracts/PointsContract.sol/PointsContract.json';
+import { usePrivy } from '@privy-io/react-auth';
+import { ethers } from 'ethers';
+import { getProvider, getSigner } from '@/lib/provider';
+import pointsContractABI from '@/contracts/contracts/PointsContract.sol/PointsContract.json';
+import { MetaTransactionHandler } from '@/lib/meta-transaction';
+import { useState, useEffect } from 'react';
 
 export function usePointsContract() {
-  const { address } = useAccount();
-  const contractAddress = process.env.NEXT_PUBLIC_POINTS_CONTRACT_ADDRESS as `0x${string}`;
+  const { user, ready } = usePrivy();
+  const [points, setPoints] = useState<number>(0);
+  const [pointsLoading, setPointsLoading] = useState<boolean>(true);
 
-  // Read user points
-  const { data: points, isLoading: pointsLoading } = useContractRead({
-    address: contractAddress,
-    abi: pointsContractABI.abi,
-    functionName: 'getUserPoints',
-    args: [address],
-    enabled: !!address, // Only run query if address exists
-  });
+  const contractAddress = process.env.NEXT_PUBLIC_POINTS_CONTRACT_ADDRESS;
+  const forwarderAddress = process.env.NEXT_PUBLIC_FORWARDER_ADDRESS;
+  const relayerUrl = process.env.NEXT_PUBLIC_RELAYER_URL || 'https://api.defender.openzeppelin.com/autotasks/YOUR_AUTOTASK_ID';
+  const useGasless = process.env.NEXT_PUBLIC_USE_GASLESS === 'true';
 
-  // Create post and earn points
-  const { write: createPost, data: createPostData } = useContractWrite({
-    address: contractAddress,
-    abi: pointsContractABI.abi,
-    functionName: 'createPost',
-  });
+  if (!contractAddress) {
+    console.error('Points contract address not configured in environment variables');
+  }
 
-  // Add like and earn points
-  const { write: addLike, data: addLikeData } = useContractWrite({
-    address: contractAddress,
-    abi: pointsContractABI.abi,
-    functionName: 'addLike',
-  });
+  if (useGasless && !forwarderAddress) {
+    console.error('Forwarder address not configured in environment variables');
+  }
 
-  // Add comment and earn points
-  const { write: addComment, data: addCommentData } = useContractWrite({
-    address: contractAddress,
-    abi: pointsContractABI.abi,
-    functionName: 'addComment',
-  });
+  const validateContractAddress = () => {
+    if (!contractAddress) {
+      throw new Error('Points contract address not configured');
+    }
+    if (!ethers.utils.isAddress(contractAddress)) {
+      throw new Error('Invalid points contract address');
+    }
+    return contractAddress;
+  };
+
+  // Fetch user points when connected
+  useEffect(() => {
+    if (ready && user?.wallet?.address) {
+      fetchUserPoints(user.wallet.address);
+    }
+  }, [ready, user?.wallet?.address]);
+
+  // Fetch user points
+  const fetchUserPoints = async (address: string) => {
+    try {
+      setPointsLoading(true);
+      const validatedAddress = validateContractAddress();
+      const provider = await getProvider();
+
+      const contract = new ethers.Contract(
+        validatedAddress,
+        pointsContractABI.abi,
+        provider
+      );
+
+      const userPoints = await contract.getUserPoints(address);
+      setPoints(Number(userPoints));
+    } catch (error) {
+      console.error('Error fetching user points:', error);
+    } finally {
+      setPointsLoading(false);
+    }
+  };
+
+  // Create a meta-transaction handler
+  const createMetaTxHandler = async () => {
+    const provider = await getProvider();
+    const network = await provider.getNetwork();
+    const chainId = network.chainId;
+
+    if (!forwarderAddress) {
+      throw new Error('Forwarder address not configured');
+    }
+
+    return new MetaTransactionHandler(
+      forwarderAddress,
+      provider,
+      Number(chainId)
+    );
+  };
+
+  // Execute a function via meta-transaction
+  const executeMetaTransaction = async (functionName: string, args: any[]) => {
+    if (!ready || !user?.wallet?.address) {
+      throw new Error('Wallet not connected');
+    }
+
+    const validatedAddress = validateContractAddress();
+    const signer = await getSigner();
+    const userAddress = await signer.getAddress();
+
+    // Create contract interface to encode function data
+    const contract = new ethers.Contract(
+      validatedAddress,
+      pointsContractABI.abi,
+      signer
+    );
+
+    // Encode the function call
+    const data = contract.interface.encodeFunctionData(functionName, args);
+
+    // Create meta-transaction handler
+    const metaTxHandler = await createMetaTxHandler();
+    metaTxHandler.setSigner(signer);
+
+    // Create the request
+    const request = await metaTxHandler.createRequest(
+      userAddress,
+      validatedAddress,
+      data
+    );
+
+    // Sign the request
+    const signature = await metaTxHandler.signRequest(request);
+
+    // Send the meta-transaction to the relayer
+    return await metaTxHandler.sendMetaTransaction(request, signature, relayerUrl);
+  };
+
+  const addLike = async (streamId: string) => {
+    if (!ready || !user?.wallet) {
+      throw new Error('Wallet not connected');
+    }
+
+    try {
+      const validatedAddress = validateContractAddress();
+
+      // Use gasless transaction if enabled
+      if (useGasless) {
+        return await executeMetaTransaction('addLike', [streamId]);
+      } else {
+        // Regular transaction
+        const signer = await getSigner();
+
+        const contract = new ethers.Contract(
+          validatedAddress,
+          pointsContractABI.abi,
+          signer
+        );
+
+        const tx = await contract.addLike(streamId);
+        await tx.wait();
+
+        return tx.hash;
+      }
+    } catch (error) {
+      console.error('Error adding like:', error);
+      throw error;
+    }
+  };
+
+  const createPost = async (streamId: string) => {
+    if (!ready || !user?.wallet) {
+      throw new Error('Wallet not connected');
+    }
+
+    try {
+      const validatedAddress = validateContractAddress();
+
+      // Use gasless transaction if enabled
+      if (useGasless) {
+        return await executeMetaTransaction('createPost', [streamId]);
+      } else {
+        // Regular transaction
+        const signer = await getSigner();
+
+        const contract = new ethers.Contract(
+          validatedAddress,
+          pointsContractABI.abi,
+          signer
+        );
+
+        const tx = await contract.createPost(streamId);
+        await tx.wait();
+
+        return tx.hash;
+      }
+    } catch (error) {
+      console.error('Error creating post:', error);
+      throw error;
+    }
+  };
+
+  const addComment = async (streamId: string) => {
+    if (!ready || !user?.wallet) {
+      throw new Error('Wallet not connected');
+    }
+
+    try {
+      const validatedAddress = validateContractAddress();
+
+      // Use gasless transaction if enabled
+      if (useGasless) {
+        return await executeMetaTransaction('addComment', [streamId]);
+      } else {
+        // Regular transaction
+        const signer = await getSigner();
+
+        const contract = new ethers.Contract(
+          validatedAddress,
+          pointsContractABI.abi,
+          signer
+        );
+
+        const tx = await contract.addComment(streamId);
+        await tx.wait();
+
+        return tx.hash;
+      }
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      throw error;
+    }
+  };
+
+  const addRepost = async (streamId: string) => {
+    if (!ready || !user?.wallet) {
+      throw new Error('Wallet not connected');
+    }
+
+    try {
+      const validatedAddress = validateContractAddress();
+
+      // Use gasless transaction if enabled
+      if (useGasless) {
+        return await executeMetaTransaction('addRepost', [streamId]);
+      } else {
+        // Regular transaction
+        const signer = await getSigner();
+
+        const contract = new ethers.Contract(
+          validatedAddress,
+          pointsContractABI.abi,
+          signer
+        );
+
+        const tx = await contract.addRepost(streamId);
+        await tx.wait();
+
+        return tx.hash;
+      }
+    } catch (error) {
+      console.error('Error adding repost:', error);
+      throw error;
+    }
+  };
 
   return {
     points,
@@ -41,7 +251,17 @@ export function usePointsContract() {
     createPost,
     addLike,
     addComment,
+    addRepost,
+    isConnected: ready && !!user?.wallet,
+    address: user?.wallet?.address,
+    isGasless: useGasless
   };
 }
+
+
+
+
+
+
 
 

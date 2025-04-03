@@ -8,20 +8,19 @@ interface PointsContextType {
   points: number;
   isLoading: boolean;
   actions: {
-    createPost: () => void;
-    addLike: () => void;
-    addComment: () => void;
+    createPost: (streamId: string) => Promise<`0x${string}`>;
+    addLike: (streamId: string) => Promise<`0x${string}`>;
+    addComment: (streamId: string, comment: string) => Promise<`0x${string}`>;
   };
 }
 
-// Default context
 const PointsContext = createContext<PointsContextType>({
   points: 0,
   isLoading: true,
   actions: {
-    createPost: () => {},
-    addLike: () => {},
-    addComment: () => {},
+    createPost: async () => '0x',
+    addLike: async () => '0x',
+    addComment: async () => '0x',
   }
 });
 
@@ -49,6 +48,5 @@ export function PointsProvider({ children }: { children: React.ReactNode }) {
     </PointsContext.Provider>
   );
 }
-
 
 

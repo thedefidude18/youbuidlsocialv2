@@ -61,12 +61,31 @@ const config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      keyframes: {
+        'like-button': {
+          '0%, 100%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.2)' },
+        },
+        'repost-button': {
+          '0%, 100%': { transform: 'scale(1) rotate(0)' },
+          '50%': { transform: 'scale(1.2) rotate(20deg)' },
+        },
+        'quick-pulse': {
+          '0%, 100%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.1)' },
+        },
+      },
+      animation: {
+        'quick-pulse': 'quick-pulse 0.45s ease-in-out',
+      },
     },
   },
   plugins: ["tailwindcss-animate"],
 } satisfies Config
 
 export default config
+
+
 
 
 

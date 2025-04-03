@@ -24,7 +24,7 @@ import { usePosts } from '@/hooks/use-posts';
 import { Skeleton } from "@/components/ui/skeleton";
 import { use } from 'react';
 import { WithdrawDonations } from '@/components/WithdrawDonations';
-
+import { DonationHistory } from '@/components/donation-history';
 
 // Add interface for post type
 interface Post {
@@ -222,19 +222,27 @@ export default function ProfilePage({ params }: { params: { address: string } })
             </TabsContent>
 
             <TabsContent value="donations" className="p-4">
-              <div className="bg-card rounded-lg p-4">
-                <h3 className="font-semibold mb-4">Available Balance</h3>
-                <p className="text-2xl font-bold mb-4">
-                  {ethBalance ? formatEther(ethBalance) : '0'} ETH
-                </p>
-                {isOwnProfile && ethBalance && Number(ethBalance) > 0 && (
-                  <Button 
-                    onClick={() => setIsWithdrawModalOpen(true)}
-                    className="w-full"
-                  >
-                    Withdraw Funds
-                  </Button>
-                )}
+              <div className="space-y-4">
+                <div className="bg-card rounded-lg p-4">
+                  <h3 className="font-semibold mb-4">Available Balance</h3>
+                  <p className="text-2xl font-bold mb-4">
+                    {ethBalance ? formatEther(ethBalance) : '0'} ETH
+                  </p>
+                  {isOwnProfile && ethBalance && Number(ethBalance) > 0 && (
+                    <Button 
+                      onClick={() => setIsWithdrawModalOpen(true)}
+                      className="w-full"
+                    >
+                      Withdraw Funds
+                    </Button>
+                  )}
+                </div>
+
+                {/* Recent Donations */}
+                <div className="bg-card rounded-lg p-4">
+                  <h3 className="font-semibold mb-4">Recent Donations</h3>
+                  <DonationHistory address={address} />
+                </div>
               </div>
             </TabsContent>
           </ScrollArea>
@@ -305,6 +313,7 @@ function ProfileLoadingState() {
     </MainLayout>
   );
 }
+
 
 
 

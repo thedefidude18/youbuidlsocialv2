@@ -1,14 +1,13 @@
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
-import { useToast } from '@/hooks/use-toast';
-import { orbis, likePost } from '@/lib/orbis';
+import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/hooks/use-auth';
+import { orbis, ensureOrbisConnection } from '@/lib/orbis';
 import { usePostsStore } from '@/store/posts-store';
 
 export function usePostInteractions(postId: string) {
-  const { address, isConnected } = useAccount();
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const { toast } = useToast();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const { updatePost } = usePostsStore();
+  const { authenticated, user } = useAuth();
 
   const ensureOrbisConnection = async () => {
     const { status: isConnected } = await orbis.isConnected();
@@ -27,7 +26,7 @@ export function usePostInteractions(postId: string) {
   };
 
   const checkWalletConnection = async () => {
-    if (!address || !isConnected) {
+    if (!authenticated || !user?.wallet?.address) {
       toast({
         title: "Authentication Required",
         description: "Please connect your wallet to continue",
@@ -43,33 +42,43 @@ export function usePostInteractions(postId: string) {
 
     try {
       setIsProcessing(true);
-      
-      // Ensure Orbis connection before liking
       await ensureOrbisConnection();
       
-      const result = await likePost(postId);
+      const result = await orbis.react(postId, 'like');
 
       if (!result || result.status !== 200) {
         throw new Error(result?.error || 'Failed to like post');
       }
 
-      // Update post in local store
+      // Record points
+      try {
+        const response = await fetch('/api/points', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'LIKE',
+            postId
+          })
+        });
+
+        if (!response.ok) {
+          console.warn('Points not recorded but like successful');
+        }
+      } catch (pointsError) {
+        console.warn('Points recording failed but like successful');
+      }
+
       updatePost(postId, (post) => ({
         ...post,
         stats: {
           ...post.stats,
-          likes: post.stats.likes + 1
+          likes: (post.stats?.likes || 0) + 1
         }
       }));
 
       return true;
     } catch (error) {
       console.error('Like error:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to like post",
-        variant: "destructive"
-      });
       throw error;
     } finally {
       setIsProcessing(false);
@@ -81,7 +90,8 @@ export function usePostInteractions(postId: string) {
 
     try {
       setIsProcessing(true);
-      // First fetch the original post to get its content
+      await ensureOrbisConnection();
+      
       const { data: originalPost } = await orbis.getPost(postId);
       
       if (!originalPost) {
@@ -90,16 +100,15 @@ export function usePostInteractions(postId: string) {
 
       const result = await orbis.createPost({
         context: 'youbuidl:repost',
-        body: originalPost.content.body, // Include the original post content
+        body: originalPost.content.body,
         master: postId,
-        repost: true // Flag to indicate this is a repost
+        repost: true
       });
 
       if (!result || result.status !== 200) {
         throw new Error(result?.error || 'Failed to repost');
       }
 
-      // Update post in local store
       updatePost(postId, (post) => ({
         ...post,
         stats: {
@@ -122,6 +131,7 @@ export function usePostInteractions(postId: string) {
 
     try {
       setIsProcessing(true);
+      await ensureOrbisConnection();
       
       const result = await orbis.createPost({
         context: 'youbuidl:comment',
@@ -134,12 +144,11 @@ export function usePostInteractions(postId: string) {
         throw new Error(result?.error || 'Failed to create comment');
       }
 
-      // Update post in local store
       updatePost(postId, (post) => ({
         ...post,
         stats: {
           ...post.stats,
-          comments: post.stats.comments + 1
+          comments: (post.stats?.comments || 0) + 1
         }
       }));
 
@@ -244,11 +253,14 @@ export function usePostInteractions(postId: string) {
 
   return {
     like,
-    comment,
     repost,
+    comment,
     fetchComments,
     fetchPost,
-    isProcessing
+    isProcessing,
+    setIsProcessing,
+    isConnected: authenticated,
+    address: user?.wallet?.address
   };
 }
 

@@ -8,7 +8,26 @@ import { MainLayout } from '@/components/layout/main-layout';
 import { PostCard } from '@/components/post-card';
 import { formatDistanceToNow } from 'date-fns';
 
-export default function TestHomePage() {
+function FeedLoadingState() {
+  return (
+    <div className="space-y-4 p-4">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div key={`feed-skeleton-${index}`} className="bg-card rounded-lg p-4 animate-pulse">
+          <div className="flex items-center space-x-4 mb-4">
+            <div className="h-10 w-10 rounded-full bg-muted"></div>
+            <div className="space-y-2">
+              <div className="h-4 w-24 bg-muted rounded"></div>
+              <div className="h-3 w-16 bg-muted rounded"></div>
+            </div>
+          </div>
+          <div className="h-20 bg-muted rounded"></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function FeedPage() {
   const [mounted, setMounted] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +52,6 @@ export default function TestHomePage() {
           throw new Error(error.message || 'Failed to fetch posts');
         }
 
-        // Sort posts by timestamp (newest first)
         const sortedPosts = (data || []).sort((a, b) => b.timestamp - a.timestamp);
         setPosts(sortedPosts);
       } catch (err) {
@@ -50,7 +68,18 @@ export default function TestHomePage() {
   }, [mounted]);
 
   if (!mounted) {
-    return <div className="p-8 text-center">Initializing...</div>;
+    return (
+      <MainLayout>
+        <div className="flex flex-col h-full">
+          <div className="max-w-2xl mx-auto w-full flex-1">
+            <div className="hidden md:block px-4 pt-4">
+              <div className="h-24 bg-muted rounded-lg animate-pulse" />
+            </div>
+            <FeedLoadingState />
+          </div>
+        </div>
+      </MainLayout>
+    );
   }
 
   const transformPost = (orbisPost: any) => ({
@@ -63,7 +92,6 @@ export default function TestHomePage() {
       avatar: `https://api.dicebear.com/9.x/bottts/svg?seed=${orbisPost.creator_details?.profile?.username || 'anon'}`,
       verified: false,
     },
-    // Convert Orbis timestamp (seconds) to milliseconds
     timestamp: orbisPost.timestamp * 1000,
     stats: {
       likes: orbisPost.count_likes || 0,
@@ -74,10 +102,10 @@ export default function TestHomePage() {
 
   return (
     <MainLayout>
-      <div className="max-w-2xl mx-auto py-8 px-4">
-        <div className="space-y-8">
-          {/* Compose Box - Hidden on mobile */}
-          <div className="hidden md:block">
+      <div className="flex flex-col h-full">
+        <div className="max-w-2xl mx-auto w-full flex-1">
+          {/* Compose Box - hidden on mobile */}
+          <div className="hidden md:block px-4 pt-4">
             <ComposeBox 
               onSubmit={createPost}
               isSubmitting={isSubmitting}
@@ -87,15 +115,15 @@ export default function TestHomePage() {
           </div>
 
           {/* Posts Display */}
-          <div className="space-y-4">
+          <div className="px-4">
             {loading ? (
-              <div className="text-center p-4">Loading posts...</div>
+              <div className="text-center py-4">Loading posts...</div>
             ) : error ? (
-              <div className="text-red-500 p-4">{error}</div>
+              <div className="text-red-500 py-4">{error}</div>
             ) : posts.length === 0 ? (
-              <div className="text-center p-4">No posts found</div>
+              <div className="text-center py-4">No posts found</div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-4 py-4">
                 {posts.map((post) => (
                   <PostCard 
                     key={post.stream_id} 
@@ -109,8 +137,4 @@ export default function TestHomePage() {
       </div>
     </MainLayout>
   );
-}
-
-
-
 

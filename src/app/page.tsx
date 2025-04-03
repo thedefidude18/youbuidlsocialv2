@@ -226,15 +226,15 @@ export default function HomePage() {
             </div>
           </div>
 
-          <ScrollArea className="flex-1">
-            <div className="hidden md:block p-4">
-              <ComposeBox 
-                onSubmit={createPost} 
-                isSubmitting={isSubmitting} 
-                placeholder="What's happening?"
-                maxLength={280}
-              />
-            </div>
+        <ScrollArea className="flex-1">
+          <div className="hidden md:block p-4">
+            <ComposeBox 
+              onSubmit={createPost} 
+              isSubmitting={isSubmitting} 
+              placeholder="What's happening?"
+              maxLength={280}
+            />
+          </div>
 
             <TabsContent value="latest" className="m-0 p-4">
               <div className="space-y-4">

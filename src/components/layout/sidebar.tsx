@@ -22,7 +22,7 @@ export function Sidebar() {
   const profilePath = mounted && address ? `/profile/${address}` : '/profile';
 
   const navigationItems = [
-    { href: "/", icon: Home, label: "Home" },
+    { href: "/feed", icon: Home, label: "Feed" },
     { href: "/search", icon: Search, label: "Explore" },
     { href: "/notifications", icon: Bell, label: "Notifications", count: unreadCount },
     { href: "/messages", icon: Mail, label: "Messages" },

@@ -5,6 +5,11 @@ export function middleware(request: NextRequest) {
   // Get auth session from cookie
   const authSession = request.cookies.get('auth-session');
 
+  // Redirect root to /feed
+  if (request.nextUrl.pathname === '/') {
+    return NextResponse.redirect(new URL('/feed', request.url));
+  }
+
   // Protect API routes
   if (request.nextUrl.pathname.startsWith('/api/')) {
     if (!authSession) {
@@ -19,5 +24,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: '/api/:path*',
+  matcher: ['/', '/api/:path*']
 };
