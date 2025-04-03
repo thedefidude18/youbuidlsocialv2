@@ -29,8 +29,6 @@ interface PostsState {
   updatePost: (id: string, updates: Partial<Post>) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  addPost: (post: Post) => void;
-  updatePost: (id: string, post: Partial<Post>) => void;
   removePost: (id: string) => void;
 }
 
@@ -39,23 +37,16 @@ export const usePostsStore = create<PostsState>((set) => ({
   loading: false,
   error: null,
   setPosts: (posts) => set({ posts }),
-  addPost: (post) => set((state) => ({ 
+  addPost: (post) => set((state) => ({
     posts: [post, ...state.posts]
   })),
   updatePost: (id, updates) => set((state) => ({
-    posts: state.posts.map((post) => 
+    posts: state.posts.map((post) =>
       post.id === id ? { ...post, ...updates } : post
     ),
   })),
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
-  addPost: (post) => set((state) => ({ posts: [post, ...state.posts] })),
-  updatePost: (id, updatedPost) =>
-    set((state) => ({
-      posts: state.posts.map((post) =>
-        post.id === id ? { ...post, ...updatedPost } : post
-      ),
-    })),
   removePost: (id) =>
     set((state) => ({
       posts: state.posts.filter((post) => post.id !== id),

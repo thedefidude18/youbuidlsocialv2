@@ -11,16 +11,16 @@ export const orbis = new Orbis({
 export const initializeOrbis = async () => {
   try {
     const res = await orbis.isConnected();
-    
+
     if (!res || !res.status) {
       console.log('Connecting to Orbis...');
       const connectRes = await orbis.connect();
-      
+
       if (!connectRes.status) {
         throw new Error('Failed to connect to Orbis');
       }
     }
-    
+
     return true;
   } catch (error) {
     console.error('Error initializing Orbis:', error);
@@ -65,7 +65,7 @@ export async function connectOrbis() {
     return res.status === 200;
 }
 
-export async function createPost(content: string, hashtags: string[] = []) {
+export async function createPost(content: string, hashtags: string[] = [], ipfsHash?: string) {
     // Basic sanitization for iframes
     const sanitizedContent = content.replace(
         /<iframe[^>]*(src="https:\/\/[^"]*")[^>]*>[^<]*<\/iframe>/gi,
@@ -78,12 +78,24 @@ export async function createPost(content: string, hashtags: string[] = []) {
         }
     );
 
-    const res = await orbis.createPost({
+    // Create post data
+    const postData: any = {
         body: sanitizedContent,
         context: 'youbuidl:post',
         tags: hashtags
-    });
-    
+    };
+
+    // Add data field with IPFS hash if provided
+    if (ipfsHash) {
+        postData.data = { ipfsHash };
+    }
+
+    // Ensure we're connected to Orbis
+    await ensureOrbisConnection();
+
+    // Create the post
+    const res = await orbis.createPost(postData);
+
     return res;
 }
 
@@ -92,13 +104,13 @@ export async function getPosts() {
         const { data, error } = await orbis.getPosts({
             context: 'youbuidl:post'
         });
-        
+
         if (error) {
             throw error;
         }
 
         console.log('Raw Orbis posts:', data); // Debug log
-        
+
         return data;
     } catch (error) {
         console.error('Error in getPosts:', error);
@@ -108,18 +120,18 @@ export async function getPosts() {
 
 export async function likePost(postId: string) {
     const { status: isConnected } = await orbis.isConnected();
-    
+
     if (!isConnected && typeof window !== 'undefined' && window.ethereum) {
         const result = await orbis.connect_v2({
             provider: window.ethereum,
             chain: 'ethereum'
         });
-        
+
         if (!result.status) {
             throw new Error('Failed to connect to Orbis');
         }
     }
-    
+
     return await orbis.react(postId, 'like');
 }
 

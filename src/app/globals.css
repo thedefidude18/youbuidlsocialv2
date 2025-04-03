@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import animations */
+@import '../styles/animations.css';
+
 /* Custom scrollbar styles */
 .custom-scrollbar {
   scrollbar-width: thin;
@@ -73,7 +76,7 @@
     scrollbar-width: none;     /* Firefox */
     overflow-y: auto;
   }
-  
+
   .hide-scrollbar::-webkit-scrollbar {
     display: none;            /* Chrome, Safari and Opera */
   }

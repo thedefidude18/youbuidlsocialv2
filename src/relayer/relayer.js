@@ -22,8 +22,8 @@ const web3 = createAlchemyWeb3(
 );
 
 // Load contract ABIs
-const MinimalForwarderABI = require('../contracts/MinimalForwarder').MinimalForwarderABI;
-const PointsContractABI = require('../contracts/contracts/PointsContract.sol/PointsContract.json').abi;
+const { MinimalForwarderABI } = require('./contracts/MinimalForwarder');
+const { PointsContractABI } = require('./contracts/PointsContract');
 
 // Create contract instances
 const forwarder = new web3.eth.Contract(MinimalForwarderABI, FORWARDER_ADDRESS);
@@ -33,32 +33,32 @@ const pointsContract = new web3.eth.Contract(PointsContractABI, POINTS_CONTRACT_
 app.post('/relay', async (req, res) => {
   try {
     const { request, signature } = req.body;
-    
+
     // Verify the request
     const valid = await forwarder.methods.verify(request, signature).call();
     if (!valid) {
       return res.status(400).json({ success: false, error: 'Invalid signature' });
     }
-    
+
     // Create a wallet from the private key
-    const provider = new ethers.providers.JsonRpcProvider(
+    const provider = new ethers.JsonRpcProvider(
       `https://opt-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`
     );
     const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
-    
+
     // Execute the meta-transaction
     const forwarderWithSigner = new ethers.Contract(
       FORWARDER_ADDRESS,
       MinimalForwarderABI,
       wallet
     );
-    
+
     const tx = await forwarderWithSigner.execute(request, signature, {
       gasLimit: 1000000, // Adjust as needed
     });
-    
+
     const receipt = await tx.wait();
-    
+
     return res.json({
       success: true,
       txHash: receipt.transactionHash,

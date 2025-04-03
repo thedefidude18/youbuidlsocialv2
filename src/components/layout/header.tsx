@@ -17,7 +17,8 @@ export function Header() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const showBackButton = pathname !== "/";
+  // Don't show back button on home page or feed page (which is the mobile home)
+  const showBackButton = pathname !== "/" && pathname !== "/feed";
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -64,9 +65,9 @@ export function Header() {
           <Button variant="ghost" className="text-sm hidden md:inline-flex">
             {points} pts • Level {level}
           </Button>
-          <Link 
-            href="https://github.com/youbuidl" 
-            target="_blank" 
+          <Link
+            href="https://github.com/youbuidl"
+            target="_blank"
             rel="noopener noreferrer"
             className="hidden md:inline-flex"
           >

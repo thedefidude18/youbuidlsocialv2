@@ -24,7 +24,10 @@ import { useCreatePost } from '@/hooks/use-create-post';
 import { usePosts } from '@/hooks/use-posts';
 import { orbis } from '@/lib/orbis';
 import { Search } from "lucide-react";
+import { usePostsStore } from '@/store/posts-store';
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { formatAddress } from '@/lib/utils';
 
 // ProfileLoadingState component
 function ProfileLoadingState() {
@@ -119,36 +122,62 @@ export default function HomePage() {
   const { points, level, nextLevelThreshold, pointsBreakdown } = usePoints();
   const { following, followers, getFollowingCount, getFollowersCount } = useFollow();
   const { posts, loading: postsLoading, refreshPosts } = usePosts();
+  const { loading: storeLoading } = usePostsStore();
   const { createPost, isSubmitting } = useCreatePost();
+  const { toast } = useToast();
 
   // 3. All useMemo hooks - must be before any conditional returns
-  const transformOrbisPost = useMemo(() => (post: any) => ({
-    id: post.stream_id,
-    content: post.content?.body || '',
-    author: {
-      id: post.creator,
-      name: post.creator_details?.profile?.username || 
-           post.creator?.slice(0, 6) + '...' + post.creator?.slice(-4),
-      username: post.creator_details?.profile?.username || post.creator,
-      avatar: post.creator_details?.profile?.pfp || '',
-      verified: false
-    },
-    timestamp: post.timestamp * 1000,
-    stats: {
-      likes: post.count_likes || 0,
-      comments: post.count_replies || 0,
-      reposts: post.count_hops || 0
-    },
-    ceramicData: post.content?.data || null
-  }), []);
+  const transformOrbisPost = useMemo(() => (post: any) => {
+    // Extract the Ethereum address from the DID if possible
+    let address = '';
+    if (post.creator_details?.did) {
+      const didParts = post.creator_details.did.split(':');
+      if (didParts.length >= 4 && didParts[0] === 'did' && didParts[1] === 'pkh' && didParts[2] === 'eip155') {
+        // Extract only the address part (should be the last part after eip155:1:)
+        // The format is typically did:pkh:eip155:1:0x... where 1 is the chain ID
+        if (didParts.length >= 5) {
+          // If format is did:pkh:eip155:1:0x...
+          address = didParts[4];
+        } else {
+          // If format is did:pkh:eip155:0x...
+          address = didParts[3];
+        }
+      }
+    }
 
-  const validPosts = useMemo(() => 
-    posts?.filter(post => 
-      post && 
-      post.id && 
-      post.stats?.likes !== undefined && 
+    // Use the formatAddress utility function
+    const formattedAddress = address ? formatAddress(address) : '';
+
+    return {
+      id: post.stream_id,
+      content: post.content?.body || '',
+      author: {
+        id: post.creator_details?.did || post.creator || '',
+        name: post.creator_details?.profile?.username || formattedAddress || 'Anonymous',
+        username: post.creator_details?.profile?.username || 'anonymous',
+        address: address, // Add the address field
+        avatar: post.creator_details?.profile?.pfp || `https://api.dicebear.com/9.x/bottts/svg?seed=${address || 'anon'}`,
+        verified: false
+      },
+      timestamp: post.timestamp * 1000,
+      stats: {
+        likes: post.count_likes || 0,
+        comments: post.count_replies || 0,
+        reposts: post.count_hops || 0
+      },
+      hashtags: [], // Required by the Post interface
+      images: [], // Required by the Post interface
+      ceramicData: post.content?.data || null
+    };
+  }, []);
+
+  const validPosts = useMemo(() =>
+    posts?.filter(post =>
+      post &&
+      post.id &&
+      post.stats?.likes !== undefined &&
       typeof post.id === 'string'
-    ) || [], 
+    ) || [],
     [posts]
   );
 
@@ -158,7 +187,7 @@ export default function HomePage() {
       return;
     }
     const normalizedQuery = query.toLowerCase().trim();
-    const matchingPosts = orbisPosts.filter(post => 
+    const matchingPosts = orbisPosts.filter(post =>
       post.content?.toLowerCase().includes(normalizedQuery) ||
       post.author.name.toLowerCase().includes(normalizedQuery) ||
       post.author.username.toLowerCase().includes(normalizedQuery)
@@ -184,13 +213,13 @@ export default function HomePage() {
         const { data, error } = await orbis.getPosts({
           context: 'youbuidl:post'
         });
-        
+
         if (error) throw error;
-        
+
         const transformedPosts = (data || [])
           .map(transformOrbisPost)
           .sort((a, b) => b.timestamp - a.timestamp);
-        
+
         setOrbisPosts(transformedPosts);
       } catch (error) {
         console.error('Error fetching Orbis posts:', error);
@@ -228,9 +257,38 @@ export default function HomePage() {
 
         <ScrollArea className="flex-1">
           <div className="hidden md:block p-4">
-            <ComposeBox 
-              onSubmit={createPost} 
-              isSubmitting={isSubmitting} 
+            <ComposeBox
+              onSubmit={async (content, media) => {
+                try {
+                  const success = await createPost(content, media);
+                  if (success) {
+                    // Refresh both post sources after creating a new post
+                    refreshPosts();
+                    // Also refresh Orbis posts
+                    const { data } = await orbis.getPosts({ context: 'youbuidl:post' });
+                    if (data) {
+                      const transformedPosts = data
+                        .map(transformOrbisPost)
+                        .sort((a, b) => b.timestamp - a.timestamp);
+                      setOrbisPosts(transformedPosts);
+                    }
+
+                    // Show success message
+                    toast({
+                      title: "Post created",
+                      description: "Your post has been published successfully!"
+                    });
+                  }
+                } catch (error) {
+                  console.error('Error creating post:', error);
+                  toast({
+                    title: "Error",
+                    description: "Failed to create post. Please try again.",
+                    variant: "destructive"
+                  });
+                }
+              }}
+              isSubmitting={isSubmitting}
               placeholder="What's happening?"
               maxLength={280}
             />
@@ -242,8 +300,8 @@ export default function HomePage() {
                   <HomeLoadingState />
                 ) : orbisPosts.length > 0 ? (
                   orbisPosts.map((post) => (
-                    <PostCard 
-                      key={post.stream_id} 
+                    <PostCard
+                      key={post.stream_id}
                       post={{
                         id: post.stream_id,
                         content: post.content?.body || '',
@@ -251,7 +309,7 @@ export default function HomePage() {
                           id: post.creator,
                           name: post.creator_details?.profile?.username || 'Anonymous',
                           username: post.creator_details?.profile?.username || 'anonymous',
-                          avatar: post.creator_details?.profile?.pfp || 
+                          avatar: post.creator_details?.profile?.pfp ||
                             `https://api.dicebear.com/7.x/avatars/svg?seed=${post.creator}`,
                           verified: post.creator_details?.profile?.verified || false
                         },
@@ -261,7 +319,7 @@ export default function HomePage() {
                           comments: post.count_replies || 0,
                           reposts: post.count_haha || 0
                         }
-                      }} 
+                      }}
                     />
                   ))
                 ) : (
@@ -278,9 +336,9 @@ export default function HomePage() {
                 <HomeLoadingState />
               ) : validPosts.length > 0 ? (
                 validPosts.map((post, index) => (
-                  <PostCard 
-                    key={`following-${post.id}-${index}`} 
-                    post={post} 
+                  <PostCard
+                    key={`following-${post.id}-${index}`}
+                    post={post}
                   />
                 ))
               ) : (
@@ -297,9 +355,9 @@ export default function HomePage() {
                 <HomeLoadingState />
               ) : orbisPosts.length > 0 ? (
                 orbisPosts.map((post, index) => (
-                  <PostCard 
-                    key={`foryou-${post.id}-${index}`} 
-                    post={post} 
+                  <PostCard
+                    key={`foryou-${post.id}-${index}`}
+                    post={post}
                   />
                 ))
               ) : (
@@ -316,9 +374,9 @@ export default function HomePage() {
                 <HomeLoadingState />
               ) : orbisPosts.length > 0 ? (
                 orbisPosts.map((post, index) => (
-                  <PostCard 
-                    key={`latest-${post.id}-${index}`} 
-                    post={post} 
+                  <PostCard
+                    key={`latest-${post.id}-${index}`}
+                    post={post}
                   />
                 ))
               ) : (
@@ -350,8 +408,8 @@ export default function HomePage() {
                 <div className="space-y-4">
                   {searchResults.length > 0 ? (
                     searchResults.map((result, index) => (
-                      <PostCard 
-                        key={`search-${result.id}-${index}`} 
+                      <PostCard
+                        key={`search-${result.id}-${index}`}
                         post={result}
                       />
                     ))
@@ -368,8 +426,8 @@ export default function HomePage() {
                     <h3 className="text-base font-medium mb-2">Recent Posts</h3>
                     <div className="space-y-4">
                       {orbisPosts.slice(0, 3).map((post, index) => (
-                        <PostCard 
-                          key={`trending-${post.id}-${index}`} 
+                        <PostCard
+                          key={`trending-${post.id}-${index}`}
                           post={post}
                         />
                       ))}

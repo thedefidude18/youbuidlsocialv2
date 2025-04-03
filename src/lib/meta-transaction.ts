@@ -25,11 +25,11 @@ const ForwardRequest = [
  */
 export class MetaTransactionHandler {
   private forwarderAddress: string;
-  private provider: ethers.providers.Provider;
+  private provider: ethers.Provider;
   private signer: ethers.Signer | null = null;
   private chainId: number;
 
-  constructor(forwarderAddress: string, provider: ethers.providers.Provider, chainId: number) {
+  constructor(forwarderAddress: string, provider: ethers.Provider, chainId: number) {
     this.forwarderAddress = forwarderAddress;
     this.provider = provider;
     this.chainId = chainId;
@@ -107,7 +107,7 @@ export class MetaTransactionHandler {
       ForwardRequest,
     };
 
-    const signature = await this.signer._signTypedData(
+    const signature = await this.signer.signTypedData(
       domainData,
       types,
       request

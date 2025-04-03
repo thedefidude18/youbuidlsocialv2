@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { orbis } from '@/lib/orbis';
 import { useCreatePost } from '@/hooks/use-create-post';
 import { ComposeBox } from "@/components/compose-box";
 import { MainLayout } from '@/components/layout/main-layout';
 import { PostCard } from '@/components/post-card';
 import { formatDistanceToNow } from 'date-fns';
+import { usePostsStore } from '@/store/posts-store';
+import { useToast } from '@/hooks/use-toast';
+import { formatAddress } from '@/lib/utils';
 
 function FeedLoadingState() {
   return (
@@ -28,44 +31,101 @@ function FeedLoadingState() {
 }
 
 export default function FeedPage() {
+  // Add closing brace at the end of the file
   const [mounted, setMounted] = useState(false);
-  const [posts, setPosts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const [localPosts, setLocalPosts] = useState<any[]>([]);
+  const [localLoading, setLocalLoading] = useState(true);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  // Use the posts store for adding new posts, but maintain local state for display
+  const { addPost } = usePostsStore();
+  const { toast } = useToast();
   const { createPost, isSubmitting } = useCreatePost();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    async function fetchPosts() {
-      try {
-        console.log('Fetching posts from Orbis...');
-        const { data, error } = await orbis.getPosts({
-          context: 'youbuidl:post'
-        });
+  // Create a memoized fetchPosts function that can be called after post creation
+  const fetchPosts = useCallback(async (forceRefresh = false) => {
+    // Don't fetch if already loading or if we have posts and this isn't a forced refresh
+    if (localLoading && !forceRefresh) return;
+    if (localPosts.length > 0 && !forceRefresh && initialLoadDone) return;
 
-        console.log('Orbis response:', { data, error });
+    try {
+      setLocalLoading(true);
+      console.log('Fetching posts from Orbis...');
+      const { data, error } = await orbis.getPosts({
+        context: 'youbuidl:post'
+      });
 
-        if (error) {
-          throw new Error(error.message || 'Failed to fetch posts');
-        }
+      console.log('Orbis response:', { data, error });
 
-        const sortedPosts = (data || []).sort((a, b) => b.timestamp - a.timestamp);
-        setPosts(sortedPosts);
-      } catch (err) {
-        console.error('Error:', err);
-        setError(err instanceof Error ? err.message : 'An error occurred');
-      } finally {
-        setLoading(false);
+      if (error) {
+        throw new Error(error.message || 'Failed to fetch posts');
       }
-    }
 
-    if (mounted) {
-      fetchPosts();
+      const sortedPosts = (data || []).sort((a, b) => b.timestamp - a.timestamp);
+      setLocalPosts(sortedPosts);
+      setInitialLoadDone(true);
+
+      // Also update the global store for new posts
+      sortedPosts.forEach(post => {
+        // Only add to store if it's a new post
+        if (post.timestamp && post.timestamp > Date.now() / 1000 - 60) { // Posts from the last minute (timestamp is in seconds)
+          try {
+            const transformedPost = transformPost(post);
+            // Add missing properties required by the Post interface
+            const completePost = {
+              ...transformedPost,
+              hashtags: [],
+              images: []
+            };
+            addPost(completePost);
+          } catch (error) {
+            console.error('Error transforming post:', error);
+          }
+        }
+      });
+    } catch (err) {
+      console.error('Error:', err);
+      setLocalError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLocalLoading(false);
     }
-  }, [mounted]);
+  }, [localLoading, localPosts.length, initialLoadDone, addPost]);
+
+  // Fetch posts when component mounts - only once
+  useEffect(() => {
+    if (mounted && !initialLoadDone) {
+      // Add a small delay to ensure the component is fully mounted
+      const timer = setTimeout(() => {
+        fetchPosts(true); // Force initial fetch
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [mounted, initialLoadDone, fetchPosts]);
+
+  // Debug effect to log state changes
+  useEffect(() => {
+    console.log('Feed state:', { loading: localLoading, error: localError, postsCount: localPosts.length });
+  }, [localLoading, localError, localPosts.length]);
+
+  // Set up a refresh interval (but don't refresh if the user is viewing the page)
+  useEffect(() => {
+    if (!mounted) return;
+
+    // Refresh posts every 30 seconds, but only if the page is visible
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchPosts(true);
+      }
+    }, 30000);
+
+    return () => clearInterval(intervalId);
+  }, [mounted, fetchPosts]);
 
   if (!mounted) {
     return (
@@ -82,23 +142,48 @@ export default function FeedPage() {
     );
   }
 
-  const transformPost = (orbisPost: any) => ({
-    id: orbisPost.stream_id,
-    content: orbisPost.content?.body || '',
-    author: {
-      id: orbisPost.creator_details?.did || '',
-      name: orbisPost.creator_details?.profile?.username || 'Anonymous',
-      username: orbisPost.creator_details?.profile?.username || 'anonymous',
-      avatar: `https://api.dicebear.com/9.x/bottts/svg?seed=${orbisPost.creator_details?.profile?.username || 'anon'}`,
-      verified: false,
-    },
-    timestamp: orbisPost.timestamp * 1000,
-    stats: {
-      likes: orbisPost.count_likes || 0,
-      comments: orbisPost.count_replies || 0,
-      reposts: 0,
-    },
-  });
+  const transformPost = (orbisPost: any) => {
+    // Extract the Ethereum address from the DID if possible
+    let address = '';
+    if (orbisPost.creator_details?.did) {
+      const didParts = orbisPost.creator_details.did.split(':');
+      if (didParts.length >= 4 && didParts[0] === 'did' && didParts[1] === 'pkh' && didParts[2] === 'eip155') {
+        // Extract only the address part (should be the last part after eip155:1:)
+        // The format is typically did:pkh:eip155:1:0x... where 1 is the chain ID
+        if (didParts.length >= 5) {
+          // If format is did:pkh:eip155:1:0x...
+          address = didParts[4];
+        } else {
+          // If format is did:pkh:eip155:0x...
+          address = didParts[3];
+        }
+      }
+    }
+
+    // Use the formatAddress utility function
+    const formattedAddress = address ? formatAddress(address) : '';
+
+    return {
+      id: orbisPost.stream_id,
+      content: orbisPost.content?.body || '',
+      author: {
+        id: orbisPost.creator_details?.did || '',
+        name: orbisPost.creator_details?.profile?.username || formattedAddress || 'Anonymous',
+        username: orbisPost.creator_details?.profile?.username || 'anonymous',
+        address: address, // Add the address field
+        avatar: `https://api.dicebear.com/9.x/bottts/svg?seed=${orbisPost.creator_details?.profile?.username || address || 'anon'}`,
+        verified: false,
+      },
+      timestamp: orbisPost.timestamp * 1000,
+      stats: {
+        likes: orbisPost.count_likes || 0,
+        comments: orbisPost.count_replies || 0,
+        reposts: 0,
+      },
+      hashtags: [], // Required by the Post interface
+      images: [], // Required by the Post interface
+    };
+  };
 
   return (
     <MainLayout>
@@ -106,8 +191,20 @@ export default function FeedPage() {
         <div className="max-w-2xl mx-auto w-full flex-1">
           {/* Compose Box - hidden on mobile */}
           <div className="hidden md:block px-4 pt-4">
-            <ComposeBox 
-              onSubmit={createPost}
+            <ComposeBox
+              onSubmit={async (content, media) => {
+                const success = await createPost(content, media);
+                if (success) {
+                  // Force refresh the feed after creating a post
+                  fetchPosts(true);
+
+                  // Show success message
+                  toast({
+                    title: "Post created",
+                    description: "Your post has been published successfully!"
+                  });
+                }
+              }}
               isSubmitting={isSubmitting}
               placeholder="What's happening?"
               maxLength={280}
@@ -116,17 +213,17 @@ export default function FeedPage() {
 
           {/* Posts Display */}
           <div className="px-4">
-            {loading ? (
+            {localLoading && localPosts.length === 0 ? (
               <div className="text-center py-4">Loading posts...</div>
-            ) : error ? (
-              <div className="text-red-500 py-4">{error}</div>
-            ) : posts.length === 0 ? (
+            ) : localError ? (
+              <div className="text-red-500 py-4">{localError}</div>
+            ) : localPosts.length === 0 ? (
               <div className="text-center py-4">No posts found</div>
             ) : (
               <div className="space-y-4 py-4">
-                {posts.map((post) => (
-                  <PostCard 
-                    key={post.stream_id} 
+                {localPosts.map((post) => (
+                  <PostCard
+                    key={post.stream_id}
                     post={transformPost(post)}
                   />
                 ))}
@@ -137,4 +234,5 @@ export default function FeedPage() {
       </div>
     </MainLayout>
   );
+}
 

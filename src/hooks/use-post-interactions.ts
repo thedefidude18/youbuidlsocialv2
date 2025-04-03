@@ -9,21 +9,7 @@ export function usePostInteractions(postId: string) {
   const { toast } = useToast();
   const { authenticated, user } = useAuth();
 
-  const ensureOrbisConnection = async () => {
-    const { status: isConnected } = await orbis.isConnected();
-    
-    if (!isConnected && typeof window !== 'undefined' && window.ethereum) {
-      const result = await orbis.connect_v2({
-        provider: window.ethereum,
-        chain: 'ethereum'
-      });
-      
-      if (!result.status) {
-        throw new Error('Failed to connect to Orbis');
-      }
-    }
-    return true;
-  };
+  // Use the imported ensureOrbisConnection function
 
   const checkWalletConnection = async () => {
     if (!authenticated || !user?.wallet?.address) {
@@ -43,7 +29,7 @@ export function usePostInteractions(postId: string) {
     try {
       setIsProcessing(true);
       await ensureOrbisConnection();
-      
+
       const result = await orbis.react(postId, 'like');
 
       if (!result || result.status !== 200) {
@@ -91,24 +77,27 @@ export function usePostInteractions(postId: string) {
     try {
       setIsProcessing(true);
       await ensureOrbisConnection();
-      
+
+      // Get the original post
       const { data: originalPost } = await orbis.getPost(postId);
-      
+
       if (!originalPost) {
         throw new Error('Original post not found');
       }
 
+      // Create a repost
       const result = await orbis.createPost({
         context: 'youbuidl:repost',
-        body: originalPost.content.body,
+        body: originalPost.content?.body || '',
         master: postId,
-        repost: true
+        data: { repost: true, original_post_id: postId }
       });
 
       if (!result || result.status !== 200) {
         throw new Error(result?.error || 'Failed to repost');
       }
 
+      // Update the post stats in the local store
       updatePost(postId, (post) => ({
         ...post,
         stats: {
@@ -116,6 +105,24 @@ export function usePostInteractions(postId: string) {
           reposts: (post.stats?.reposts || 0) + 1
         }
       }));
+
+      // Record points for reposting
+      try {
+        const response = await fetch('/api/points', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'REPOST',
+            postId
+          })
+        });
+
+        if (!response.ok) {
+          console.warn('Points not recorded but repost successful');
+        }
+      } catch (pointsError) {
+        console.warn('Points recording failed but repost successful');
+      }
 
       return true;
     } catch (error) {
@@ -132,7 +139,7 @@ export function usePostInteractions(postId: string) {
     try {
       setIsProcessing(true);
       await ensureOrbisConnection();
-      
+
       const result = await orbis.createPost({
         context: 'youbuidl:comment',
         body: content,
@@ -176,7 +183,7 @@ export function usePostInteractions(postId: string) {
         timestamp: comment.timestamp * 1000,
         author: {
           id: comment.creator,
-          name: comment.creator_details?.profile?.username || 
+          name: comment.creator_details?.profile?.username ||
                comment.creator?.slice(0, 6) + '...' + comment.creator?.slice(-4),
           username: comment.creator_details?.profile?.username || comment.creator,
           avatar: comment.creator_details?.profile?.pfp || '',
@@ -194,9 +201,9 @@ export function usePostInteractions(postId: string) {
     try {
       setIsProcessing(true);
       const { data, error } = await orbis.getPost(postId);
-      
+
       if (error) throw error;
-      
+
       // Fetch comments for the post
       const { data: comments } = await orbis.getPosts({
         context: 'youbuidl:comment',
@@ -209,7 +216,7 @@ export function usePostInteractions(postId: string) {
         content: data.content?.body || '',
         author: {
           id: data.creator,
-          name: data.creator_details?.profile?.username || 
+          name: data.creator_details?.profile?.username ||
                data.creator?.slice(0, 6) + '...' + data.creator?.slice(-4),
           username: data.creator_details?.profile?.username || data.creator,
           avatar: data.creator_details?.profile?.pfp || '',
@@ -227,7 +234,7 @@ export function usePostInteractions(postId: string) {
           content: comment.content?.body || '',
           author: {
             id: comment.creator,
-            name: comment.creator_details?.profile?.username || 
+            name: comment.creator_details?.profile?.username ||
                  comment.creator?.slice(0, 6) + '...' + comment.creator?.slice(-4),
             username: comment.creator_details?.profile?.username || comment.creator,
             avatar: comment.creator_details?.profile?.pfp || '',
