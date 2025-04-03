@@ -9,7 +9,7 @@ export function usePointsContract() {
   const { user, ready } = usePrivy();
   const [points, setPoints] = useState<number>(0);
   const [pointsLoading, setPointsLoading] = useState<boolean>(true);
-  
+
   const contractAddress = process.env.NEXT_PUBLIC_POINTS_CONTRACT_ADDRESS;
   const forwarderAddress = process.env.NEXT_PUBLIC_FORWARDER_ADDRESS;
   const relayerUrl = process.env.NEXT_PUBLIC_RELAYER_URL || 'http://localhost:3001';
@@ -18,7 +18,7 @@ export function usePointsContract() {
   if (!contractAddress) {
     console.error('Points contract address not configured in environment variables');
   }
-  
+
   if (useGasless && !forwarderAddress) {
     console.error('Forwarder address not configured in environment variables');
   }
@@ -39,7 +39,7 @@ export function usePointsContract() {
       setPointsLoading(true);
       const validatedAddress = validateContractAddress();
       const provider = await getProvider();
-      
+
       const contract = new ethers.Contract(
         validatedAddress,
         pointsContractABI.abi,
@@ -59,6 +59,13 @@ export function usePointsContract() {
   useEffect(() => {
     if (ready && user?.wallet?.address) {
       fetchUserPoints(user.wallet.address);
+
+      // Set up a refresh interval to keep points updated
+      const intervalId = setInterval(() => {
+        fetchUserPoints(user.wallet.address);
+      }, 30000); // Refresh every 30 seconds
+
+      return () => clearInterval(intervalId);
     }
   }, [ready, user?.wallet?.address, fetchUserPoints]);
 
@@ -67,11 +74,11 @@ export function usePointsContract() {
     const provider = await getProvider();
     const network = await provider.getNetwork();
     const chainId = network.chainId;
-    
+
     if (!forwarderAddress) {
       throw new Error('Forwarder address not configured');
     }
-    
+
     return new MetaTransactionHandler(
       forwarderAddress,
       provider,
@@ -88,31 +95,31 @@ export function usePointsContract() {
     const validatedAddress = validateContractAddress();
     const signer = await getSigner();
     const userAddress = await signer.getAddress();
-    
+
     // Create contract interface to encode function data
     const contract = new ethers.Contract(
       validatedAddress,
       pointsContractABI.abi,
       signer
     );
-    
+
     // Encode the function call
     const data = contract.interface.encodeFunctionData(functionName, args);
-    
+
     // Create meta-transaction handler
     const metaTxHandler = await createMetaTxHandler();
     metaTxHandler.setSigner(signer);
-    
+
     // Create the request
     const request = await metaTxHandler.createRequest(
       userAddress,
       validatedAddress,
       data
     );
-    
+
     // Sign the request
     const signature = await metaTxHandler.signRequest(request);
-    
+
     // Send the meta-transaction to the relayer
     return await metaTxHandler.sendMetaTransaction(request, signature, relayerUrl);
   }, [ready, user?.wallet?.address, validateContractAddress, createMetaTxHandler, relayerUrl]);
@@ -124,14 +131,14 @@ export function usePointsContract() {
 
     try {
       const validatedAddress = validateContractAddress();
-      
+
       // Use gasless transaction if enabled
       if (useGasless) {
         return await executeMetaTransaction('addLike', [streamId]);
       } else {
         // Regular transaction
         const signer = await getSigner();
-        
+
         const contract = new ethers.Contract(
           validatedAddress,
           pointsContractABI.abi,
@@ -140,7 +147,7 @@ export function usePointsContract() {
 
         const tx = await contract.addLike(streamId);
         await tx.wait();
-        
+
         return tx.hash;
       }
     } catch (error) {
@@ -156,14 +163,14 @@ export function usePointsContract() {
 
     try {
       const validatedAddress = validateContractAddress();
-      
+
       // Use gasless transaction if enabled
       if (useGasless) {
         return await executeMetaTransaction('createPost', [streamId]);
       } else {
         // Regular transaction
         const signer = await getSigner();
-        
+
         const contract = new ethers.Contract(
           validatedAddress,
           pointsContractABI.abi,
@@ -172,7 +179,7 @@ export function usePointsContract() {
 
         const tx = await contract.createPost(streamId);
         await tx.wait();
-        
+
         return tx.hash;
       }
     } catch (error) {
@@ -188,14 +195,14 @@ export function usePointsContract() {
 
     try {
       const validatedAddress = validateContractAddress();
-      
+
       // Use gasless transaction if enabled
       if (useGasless) {
         return await executeMetaTransaction('addComment', [streamId]);
       } else {
         // Regular transaction
         const signer = await getSigner();
-        
+
         const contract = new ethers.Contract(
           validatedAddress,
           pointsContractABI.abi,
@@ -204,7 +211,7 @@ export function usePointsContract() {
 
         const tx = await contract.addComment(streamId);
         await tx.wait();
-        
+
         return tx.hash;
       }
     } catch (error) {
@@ -212,7 +219,7 @@ export function usePointsContract() {
       throw error;
     }
   }, [ready, user?.wallet, validateContractAddress, useGasless, executeMetaTransaction]);
-  
+
   const addRepost = useCallback(async (streamId: string) => {
     if (!ready || !user?.wallet) {
       throw new Error('Wallet not connected');
@@ -220,14 +227,14 @@ export function usePointsContract() {
 
     try {
       const validatedAddress = validateContractAddress();
-      
+
       // Use gasless transaction if enabled
       if (useGasless) {
         return await executeMetaTransaction('addRepost', [streamId]);
       } else {
         // Regular transaction
         const signer = await getSigner();
-        
+
         const contract = new ethers.Contract(
           validatedAddress,
           pointsContractABI.abi,
@@ -236,7 +243,7 @@ export function usePointsContract() {
 
         const tx = await contract.addRepost(streamId);
         await tx.wait();
-        
+
         return tx.hash;
       }
     } catch (error) {

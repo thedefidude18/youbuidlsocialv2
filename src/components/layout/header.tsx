@@ -12,10 +12,13 @@ import { Input } from "@/components/ui/input";
 import { LoginButton } from "@/components/login-button";
 
 export function Header() {
-  const { points, level } = usePoints();
+  const { points, level, totalPoints, isLoading } = usePoints();
   const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+
+  // Format the total points with commas for better readability
+  const formattedTotalPoints = totalPoints.toLocaleString();
 
   // Don't show back button on home page or feed page (which is the mobile home)
   const showBackButton = pathname !== "/" && pathname !== "/feed";
@@ -41,10 +44,10 @@ export function Header() {
           </Link>
         </div>
 
-        {/* Points display - mobile only */}
+        {/* Total Points display - mobile only */}
         <div className="md:hidden flex-1 flex justify-center">
           <Button variant="ghost" className="text-sm">
-            {points} pts • Lvl {level}
+            {isLoading ? 'Loading...' : `${formattedTotalPoints} Total Points`}
           </Button>
         </div>
 
@@ -63,7 +66,7 @@ export function Header() {
         {/* Right side actions */}
         <div className="flex items-center space-x-4 w-[200px] justify-end">
           <Button variant="ghost" className="text-sm hidden md:inline-flex">
-            {points} pts • Level {level}
+            {isLoading ? 'Loading...' : `${formattedTotalPoints} Total Points`}
           </Button>
           <Link
             href="https://github.com/youbuidl"

@@ -2,118 +2,124 @@
 
 import { useAccount } from 'wagmi';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState, useEffect, memo } from 'react';
 import { cn } from '@/lib/utils';
-import Home from '@/components/icons/Home';
-import PlusSquare from '@/components/icons/PlusSquare';
-import Bell from '@/components/icons/Bell';
-import User from '@/components/icons/User';
-import Search from '@/components/icons/Search';
-import { MessageSquare } from "lucide-react";
 import { Button } from '@/components/ui/button';
-import { Trophy } from 'lucide-react'
+import { Trophy, MessageSquare, Home as HomeIcon, Bell as BellIcon, User as UserIcon, PlusSquare as PlusSquareIcon } from 'lucide-react';
 
-export function MobileNav() {
+// Memoize the MobileNav component to prevent unnecessary re-renders
+const MobileNavComponent = memo(function MobileNav() {
   const { address } = useAccount();
   const pathname = usePathname();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
+  // Only run this effect once on mount
   useEffect(() => {
     setMounted(true);
-  }, []);
+
+    // Prefetch common routes to improve navigation speed
+    router.prefetch('/feed');
+    router.prefetch('/notifications');
+    router.prefetch('/leaderboard');
+    router.prefetch('/messages');
+
+    // If user is logged in, prefetch their profile page
+    if (address) {
+      router.prefetch(`/profile/${address}`);
+    }
+  }, [router, address]);
 
   const profilePath = mounted && address ? `/profile/${address}` : '#';
 
   return (
     <>
       {/* Floating Compose Button */}
-      <Link 
-        href="/compose" 
+      <Link
+        href="/compose"
         className="fixed right-4 bottom-20 z-50 md:hidden"
       >
-        <Button 
+        <Button
           className="h-14 w-14 rounded-full bg-primary hover:bg-primary/90 shadow-lg"
           size="icon"
         >
-          <PlusSquare className="h-6 w-6" />
+          <PlusSquareIcon className="h-6 w-6" />
         </Button>
       </Link>
 
       {/* Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background md:hidden">
         <div className="flex items-center justify-around">
-          <Link 
-            href="/feed" 
-            className={cn(
-              "flex flex-col items-center justify-center flex-1 h-full p-4 text-sm",
-              pathname === '/feed' ? 'text-primary' : 'text-muted-foreground'
-            )}
-          >
-            <Home className="w-5 h-5" />
-            <span></span>
-          </Link>
+          {/* Optimized navigation links with better performance */}
+          <NavLink
+            href="/feed"
+            isActive={pathname === '/feed'}
+            icon={<HomeIcon className="w-5 h-5" />}
+          />
 
-           <Link 
-        href="/messages" 
-        className={cn(
-          "flex flex-col items-center justify-center flex-1 h-full p-4 text-sm",
-          pathname === '/messages' ? 'text-primary' : 'text-muted-foreground'
-        )}
-      >
-        <MessageSquare className="w-5 h-5" />
-        <span></span>
-      </Link>
+          <NavLink
+            href="/messages"
+            isActive={pathname === '/messages'}
+            icon={<MessageSquare className="w-5 h-5" />}
+          />
 
-          <Link 
-            href="/leaderboard" 
-            className={cn(
-              "flex flex-col items-center justify-center flex-1 h-full p-4 text-sm",
-              pathname === '/leaderboard' ? 'text-primary' : 'text-muted-foreground'
-            )}
-          >
-            <Trophy className="w-5 h-5" />
-            <span></span>
-          </Link>
+          <NavLink
+            href="/leaderboard"
+            isActive={pathname === '/leaderboard'}
+            icon={<Trophy className="w-5 h-5" />}
+          />
 
-          <Link 
-            href="/notifications" 
-            className={cn(
-              "flex flex-col items-center justify-center flex-1 h-full p-4 text-sm",
-              pathname === '/notifications' ? 'text-primary' : 'text-muted-foreground'
-            )}
-          >
-            <Bell className="w-5 h-5" />
-            <span></span>
-          </Link>
+          <NavLink
+            href="/notifications"
+            isActive={pathname === '/notifications'}
+            icon={<BellIcon className="w-5 h-5" />}
+          />
 
-      
-
-          <Link
+          <NavLink
             href={profilePath}
-            className={cn(
-              "flex flex-col items-center justify-center flex-1 h-full p-4 text-sm",
-              pathname?.startsWith('/profile') ? 'text-primary' : 'text-muted-foreground'
-            )}
+            isActive={pathname?.startsWith('/profile')}
+            icon={<UserIcon className="w-5 h-5" />}
             onClick={(e) => {
               if (!mounted || !address) {
                 e.preventDefault();
                 // Optionally show a toast or modal prompting to connect wallet
               }
             }}
-          >
-            <User className="w-5 h-5" />
-            <span></span>
-          </Link>
+          />
         </div>
       </nav>
     </>
   );
-}
+});
 
+// Optimized NavLink component for mobile navigation
+const NavLink = memo(({ href, isActive, icon, onClick }: {
+  href: string;
+  isActive: boolean;
+  icon: React.ReactNode;
+  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+}) => {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "flex flex-col items-center justify-center flex-1 h-full p-4 text-sm",
+        isActive ? 'text-primary' : 'text-muted-foreground'
+      )}
+      onClick={onClick}
+      prefetch={true}
+    >
+      {icon}
+      <span></span>
+    </Link>
+  );
+});
 
+NavLink.displayName = 'NavLink';
+MobileNavComponent.displayName = 'MobileNav';
 
-
-
+// Export the optimized component
+export const MobileNav = MobileNavComponent;
 
 

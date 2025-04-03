@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/use-toast";
 import { usePointsContract } from "@/hooks/usePointsContract";
@@ -11,6 +12,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { OptimismLink } from '@/components/optimism-link';
 import { usePoints } from '@/providers/points-provider';
+import { PointsDisplay } from '@/components/points-display';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -98,6 +100,25 @@ export function PostCard({ post }: PostCardProps) {
   const [isLoadingPoints, setIsLoadingPoints] = useState(true);
   const { theme } = useTheme();
 
+  // Check if the current user has liked or reposted this post
+  useEffect(() => {
+    async function checkUserInteractions() {
+      try {
+        // For now, we'll just use the local state
+        // In a real app, you would check if the user has liked or reposted the post
+        // by querying the blockchain or a database
+
+        // This is a placeholder for actual implementation
+        // setIsLiked(false);
+        // setIsReposted(false);
+      } catch (error) {
+        console.error('Error checking user interactions:', error);
+      }
+    }
+
+    checkUserInteractions();
+  }, [post.id]);
+
   // Fetch user points
   useEffect(() => {
     async function fetchUserPoints() {
@@ -170,8 +191,8 @@ export function PostCard({ post }: PostCardProps) {
     setLikeCount(prev => wasLiked ? prev - 1 : prev + 1);
 
     try {
-      // Make the API call in the background
-      const success = await like();
+      // Make the API call in the background - pass the current like state
+      const success = await like(wasLiked);
 
       // If the API call fails, revert the UI
       if (!success) {
@@ -210,8 +231,8 @@ export function PostCard({ post }: PostCardProps) {
     }
 
     try {
-      // Make the API call in the background
-      const success = await repost();
+      // Make the API call in the background - pass the current repost state
+      const success = await repost(wasReposted);
 
       // If the API call fails, revert the UI
       if (!success) {
@@ -355,30 +376,39 @@ export function PostCard({ post }: PostCardProps) {
     }
   };
 
-  const renderImage = (ipfsHash: string) => {
+  // Memoize the image rendering function to prevent unnecessary re-renders
+  const renderImage = useCallback((ipfsHash: string) => {
     if (!ipfsHash) return null;
 
     const imageUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
+    const fallbackUrl = `https://ipfs.io/ipfs/${ipfsHash}`;
 
     return (
       <div className="mt-2 relative group">
-        <img
-          src={imageUrl}
-          alt="Post attachment"
-          className="rounded-lg max-h-[500px] w-full object-cover"
-          loading="lazy"
-          onError={(e) => {
-            // Fallback if Pinata gateway fails
-            const img = e.target as HTMLImageElement;
-            if (!img.src.includes('ipfs.io')) {
-              img.src = `https://ipfs.io/ipfs/${ipfsHash}`;
-            }
-          }}
-        />
+        <div className="relative w-full h-[300px] md:h-[400px] rounded-lg overflow-hidden">
+          <Image
+            src={imageUrl}
+            alt="Post attachment"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="rounded-lg object-cover"
+            priority={false}
+            quality={80}
+            placeholder="blur"
+            blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+P+/HgAEtAI8V7yQCgAAAABJRU5ErkJggg=="
+            onError={() => {
+              // This is handled differently with next/image
+              const imgElement = document.querySelector(`[src="${imageUrl}"]`) as HTMLImageElement;
+              if (imgElement) {
+                imgElement.src = fallbackUrl;
+              }
+            }}
+          />
+        </div>
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors rounded-lg" />
       </div>
     );
-  };
+  }, []);
 
   return (
     <>

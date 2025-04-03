@@ -3,9 +3,10 @@
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { ProtectedRoute } from '@/components/protected-route';
+import { ProtectedRoute as ProtectedRouteComponent } from '@/components/protected-route';
 
-export function ProtectedRoute({ children }: { children: React.ReactNode }) {
+// This is a local wrapper for the profile page
+export function ProfileProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 

@@ -1,11 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { memo } from 'react';
 import type { ReactNode } from 'react';
-import { Header } from "./header";
-import { Sidebar } from "./sidebar";
-import { RightSidebar } from "./right-sidebar";
+import dynamic from 'next/dynamic';
 import { TooltipProvider } from "@/components/ui/tooltip";
+
+// Dynamically import components to improve initial load time
+const Header = dynamic(() => import("./header").then(mod => ({ default: mod.Header })), { ssr: true });
+const Sidebar = dynamic(() => import("./sidebar").then(mod => ({ default: mod.Sidebar })), { ssr: false });
+const RightSidebar = dynamic(() => import("./right-sidebar").then(mod => ({ default: mod.RightSidebar })), { ssr: false });
 
 interface MainLayoutProps {
   children: ReactNode;
