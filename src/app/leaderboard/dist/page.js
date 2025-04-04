@@ -137,6 +137,5 @@ function LeaderboardPage() {
                         user.userId !== (user === null || user === void 0 ? void 0 : user.id) && (React.createElement(button_1.Button, { variant: user.isFollowing ? "default" : "outline", size: "sm", className: "rounded-full", onClick: function () { return handleToggleFollow(user.userId); } }, user.isFollowing ? "Following" : "Follow"))))); })),
                 mounted && getCurrentLeaderboard().length === 0 && (React.createElement("div", { className: "p-8 text-center text-muted-foreground" }, "No data available yet"))))))));
 }
-
 exports.default = LeaderboardPage;
 var templateObject_1;
