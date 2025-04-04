@@ -44,11 +44,9 @@ export function Header() {
           </Link>
         </div>
 
-        {/* Total Points display - mobile only */}
+        {/* Center area - mobile */}
         <div className="md:hidden flex-1 flex justify-center">
-          <Button variant="ghost" className="text-sm">
-            {isLoading ? 'Loading...' : `${formattedTotalPoints} Total Points`}
-          </Button>
+          {/* Empty center area on mobile */}
         </div>
 
         {/* Search Bar - centered */}
@@ -65,9 +63,7 @@ export function Header() {
 
         {/* Right side actions */}
         <div className="flex items-center space-x-4 w-[200px] justify-end">
-          <Button variant="ghost" className="text-sm hidden md:inline-flex">
-            {isLoading ? 'Loading...' : `${formattedTotalPoints} Total Points`}
-          </Button>
+          {/* Points display removed */}
           <Link
             href="https://github.com/youbuidl"
             target="_blank"

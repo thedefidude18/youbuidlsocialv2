@@ -213,20 +213,31 @@ export default function FeedPage() {
 
           {/* Posts Display */}
           <div className="px-4">
-            {localLoading && localPosts.length === 0 ? (
-              <div className="text-center py-4">Loading posts...</div>
-            ) : localError ? (
+            {localError ? (
               <div className="text-red-500 py-4">{localError}</div>
-            ) : localPosts.length === 0 ? (
-              <div className="text-center py-4">No posts found</div>
             ) : (
               <div className="space-y-4 py-4">
-                {localPosts.map((post) => (
-                  <PostCard
-                    key={post.stream_id}
-                    post={transformPost(post)}
-                  />
-                ))}
+                {/* Show skeleton loading when loading and no posts */}
+                {localLoading && localPosts.length === 0 && (
+                  <FeedLoadingState />
+                )}
+
+                {/* Show posts when available */}
+                {localPosts.length > 0 && (
+                  localPosts.map((post) => (
+                    <PostCard
+                      key={post.stream_id}
+                      post={transformPost(post)}
+                    />
+                  ))
+                )}
+
+                {/* Show no posts message when not loading and no posts */}
+                {!localLoading && localPosts.length === 0 && !localError && (
+                  <div className="text-center py-4 text-muted-foreground">
+                    No posts found. Be the first to post something!
+                  </div>
+                )}
               </div>
             )}
           </div>
