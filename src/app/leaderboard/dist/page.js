@@ -161,7 +161,7 @@ function LeaderboardPage() {
                 return pointsLeaderboard;
         }
     };
-    
+
     return (React.createElement(main_layout_1.MainLayout, null,
         React.createElement("div", { className: "flex-1 min-h-0 flex flex-col pb-16 md:pb-0" },
             React.createElement(page_header_1.PageHeader, { title: "Leaderboard" }),
