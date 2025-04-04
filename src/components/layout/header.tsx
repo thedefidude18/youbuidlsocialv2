@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { EnhancedLink } from "@/components/ui/enhanced-link";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -38,10 +38,10 @@ export function Header() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
           ) : null}
-          <Link href="/" className="flex items-center gap-2">
+          <EnhancedLink href="/" className="flex items-center gap-2">
             <img src="/youlogo.svg" alt="Logo" className="h-6 w-6" />
             <span className="font-semibold">youBuidl</span>
-          </Link>
+          </EnhancedLink>
         </div>
 
         {/* Center area - mobile */}
@@ -64,7 +64,7 @@ export function Header() {
         {/* Right side actions */}
         <div className="flex items-center space-x-4 w-[200px] justify-end">
           {/* Points display removed */}
-          <Link
+          <EnhancedLink
             href="https://github.com/youbuidl"
             target="_blank"
             rel="noopener noreferrer"
@@ -73,7 +73,7 @@ export function Header() {
             <Button variant="ghost" size="icon">
               <Github className="h-5 w-5" />
             </Button>
-          </Link>
+          </EnhancedLink>
           <ThemeToggle />
           <LoginButton />
         </div>

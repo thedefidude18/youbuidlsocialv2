@@ -11,6 +11,8 @@ import { Inter } from 'next/font/google';
 import { PrivyClientProvider } from '@/providers/privy-provider';
 import { WalletProvider } from '@/providers/rainbow-kit-provider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
+import { DebugNavigation } from "@/components/debug-navigation";
 import { useEffect } from 'react';
 import { registerServiceWorker } from '@/utils/register-sw';
 import Head from 'next/head';
@@ -67,6 +69,8 @@ export default function RootLayout({
                       {children}
                       <Toaster />
                       <MobileNav />
+                      <ServiceWorkerRegistration />
+                      <DebugNavigation />
                     </PointsProvider>
                   </AuthProvider>
                 </NotificationProvider>

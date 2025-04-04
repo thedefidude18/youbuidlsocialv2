@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { usePoints } from '@/providers/points-provider';
 
 interface UserLevelBadgeProps {
+  level?: number;
   size?: 'sm' | 'md' | 'lg';
   showTooltip?: boolean;
   userId?: string;
@@ -13,11 +14,14 @@ interface UserLevelBadgeProps {
 }
 
 export function UserLevelBadge({
+  level: propLevel,
   size = 'md',
   showTooltip = true,
   className = ''
 }: UserLevelBadgeProps) {
-  const { level, points, levelProgress, nextLevelThreshold } = usePoints();
+  const pointsData = usePoints();
+  const level = propLevel ?? pointsData.level;
+  const { points, levelProgress, nextLevelThreshold } = pointsData;
   const [hover, setHover] = useState(false);
 
   // Size configurations

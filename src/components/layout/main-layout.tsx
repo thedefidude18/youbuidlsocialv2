@@ -1,8 +1,9 @@
 'use client';
 
-import React, { memo } from 'react';
+import React, { memo, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Dynamically import components to improve initial load time
@@ -19,6 +20,23 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   children,
   showHeader = true
 }) => {
+  const router = useRouter();
+
+  // Prefetch common routes when the main layout loads
+  useEffect(() => {
+    const commonRoutes = [
+      '/feed',
+      '/profile',
+      '/notifications',
+      '/messages',
+      '/leaderboard',
+      '/search'
+    ];
+
+    commonRoutes.forEach(route => {
+      router.prefetch(route);
+    });
+  }, [router]);
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-background">

@@ -1,7 +1,6 @@
 'use client';
 
 import { useAccount } from 'wagmi';
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, memo } from 'react';
 import { cn } from '@/lib/utils';
@@ -36,9 +35,11 @@ const MobileNavComponent = memo(function MobileNav() {
   return (
     <>
       {/* Floating Compose Button */}
-      <Link
-        href="/compose"
-        className="fixed right-4 bottom-20 z-50 md:hidden"
+      <button
+        type="button"
+        onClick={() => router.push('/compose')}
+        className="fixed right-4 bottom-20 z-50 md:hidden bg-transparent border-none"
+        aria-label="Create new post"
       >
         <Button
           className="h-14 w-14 rounded-full bg-primary hover:bg-primary/90 shadow-lg"
@@ -46,7 +47,7 @@ const MobileNavComponent = memo(function MobileNav() {
         >
           <PlusSquareIcon className="h-6 w-6" />
         </Button>
-      </Link>
+      </button>
 
       {/* Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background md:hidden">
@@ -94,25 +95,37 @@ const MobileNavComponent = memo(function MobileNav() {
 });
 
 // Optimized NavLink component for mobile navigation
-const NavLink = memo(({ href, isActive, icon, onClick }: {
+const NavLink = memo(function NavLink({ href, isActive, icon, onClick }: {
   href: string;
   isActive: boolean;
   icon: React.ReactNode;
-  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
-}) => {
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+}) {
+  const router = useRouter();
+
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    // Call the original onClick if provided
+    if (onClick) {
+      onClick(e);
+    }
+
+    // Navigate to the route
+    router.push(href);
+  };
+
   return (
-    <Link
-      href={href}
+    <button
+      type="button"
       className={cn(
-        "flex flex-col items-center justify-center flex-1 h-full p-4 text-sm",
+        "flex flex-col items-center justify-center flex-1 h-full p-4 text-sm bg-transparent border-none",
         isActive ? 'text-primary' : 'text-muted-foreground'
       )}
-      onClick={onClick}
-      prefetch={true}
+      onClick={handleClick}
+      aria-label={href.replace('/', '')}
     >
       {icon}
       <span></span>
-    </Link>
+    </button>
   );
 });
 

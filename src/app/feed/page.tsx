@@ -10,25 +10,11 @@ import { formatDistanceToNow } from 'date-fns';
 import { usePostsStore } from '@/store/posts-store';
 import { useToast } from '@/hooks/use-toast';
 import { formatAddress } from '@/lib/utils';
+import { LazyLoadPosts } from '@/components/lazy-load-posts';
+import { cachedFetch } from '@/lib/cached-fetch';
+import { FeedSkeleton } from '@/components/feed-skeleton';
 
-function FeedLoadingState() {
-  return (
-    <div className="space-y-4 p-4">
-      {Array.from({ length: 3 }).map((_, index) => (
-        <div key={`feed-skeleton-${index}`} className="bg-card rounded-lg p-4 animate-pulse">
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="h-10 w-10 rounded-full bg-muted"></div>
-            <div className="space-y-2">
-              <div className="h-4 w-24 bg-muted rounded"></div>
-              <div className="h-3 w-16 bg-muted rounded"></div>
-            </div>
-          </div>
-          <div className="h-20 bg-muted rounded"></div>
-        </div>
-      ))}
-    </div>
-  );
-}
+// Using the FeedSkeleton component instead of this function
 
 export default function FeedPage() {
   // Add closing brace at the end of the file
@@ -55,23 +41,37 @@ export default function FeedPage() {
 
     try {
       setLocalLoading(true);
-      console.log('Fetching posts from Orbis...');
-      const { data, error } = await orbis.getPosts({
-        context: 'youbuidl:post'
+      console.log('Fetching posts...');
+
+      // Use cached fetch with a 30-second TTL
+      const posts = await cachedFetch('/api/posts', {
+        cacheTtl: 30, // Cache for 30 seconds
+        cacheKey: 'feed-posts',
+        // Skip cache if forcing refresh
+        skipCache: forceRefresh
+      }).catch(async () => {
+        // If API fails, fall back to direct Orbis call
+        console.log('API failed, falling back to direct Orbis call');
+        const { data, error } = await orbis.getPosts({
+          context: 'youbuidl:post'
+        });
+
+        if (error) {
+          throw new Error(error.message || 'Failed to fetch posts');
+        }
+
+        return data || [];
       });
 
-      console.log('Orbis response:', { data, error });
+      // Sort posts by timestamp (newest first)
+      const sortedPosts = Array.isArray(posts) ?
+        posts.sort((a: any, b: any) => b.timestamp - a.timestamp) : [];
 
-      if (error) {
-        throw new Error(error.message || 'Failed to fetch posts');
-      }
-
-      const sortedPosts = (data || []).sort((a, b) => b.timestamp - a.timestamp);
       setLocalPosts(sortedPosts);
       setInitialLoadDone(true);
 
       // Also update the global store for new posts
-      sortedPosts.forEach(post => {
+      sortedPosts.forEach((post: any) => {
         // Only add to store if it's a new post
         if (post.timestamp && post.timestamp > Date.now() / 1000 - 60) { // Posts from the last minute (timestamp is in seconds)
           try {
@@ -82,7 +82,7 @@ export default function FeedPage() {
               hashtags: [],
               images: []
             };
-            addPost(completePost);
+            addPost(completePost as any);
           } catch (error) {
             console.error('Error transforming post:', error);
           }
@@ -135,7 +135,9 @@ export default function FeedPage() {
             <div className="hidden md:block px-4 pt-4">
               <div className="h-24 bg-muted rounded-lg animate-pulse" />
             </div>
-            <FeedLoadingState />
+            <div className="px-4">
+              <FeedSkeleton />
+            </div>
           </div>
         </div>
       </MainLayout>
@@ -216,27 +218,29 @@ export default function FeedPage() {
             {localError ? (
               <div className="text-red-500 py-4">{localError}</div>
             ) : (
-              <div className="space-y-4 py-4">
-                {/* Show skeleton loading when loading and no posts */}
-                {localLoading && localPosts.length === 0 && (
-                  <FeedLoadingState />
-                )}
+              <div className="py-4">
+                {/* Use LazyLoadPosts component for infinite scrolling */}
+                {!mounted ? (
+                  <FeedSkeleton />
+                ) : (
+                  <LazyLoadPosts
+                    initialPosts={localPosts}
+                    fetchPosts={async (page) => {
+                      try {
+                        // Fetch paginated posts
+                        const posts = await cachedFetch(`/api/posts?page=${page}&pageSize=10`, {
+                          cacheTtl: 30,
+                          cacheKey: `feed-posts-page-${page}`,
+                        });
 
-                {/* Show posts when available */}
-                {localPosts.length > 0 && (
-                  localPosts.map((post) => (
-                    <PostCard
-                      key={post.stream_id}
-                      post={transformPost(post)}
-                    />
-                  ))
-                )}
-
-                {/* Show no posts message when not loading and no posts */}
-                {!localLoading && localPosts.length === 0 && !localError && (
-                  <div className="text-center py-4 text-muted-foreground">
-                    No posts found. Be the first to post something!
-                  </div>
+                        return posts;
+                      } catch (error) {
+                        console.error('Error fetching more posts:', error);
+                        return [];
+                      }
+                    }}
+                    pageSize={10}
+                  />
                 )}
               </div>
             )}
