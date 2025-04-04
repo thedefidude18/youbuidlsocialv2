@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useAccount } from 'wagmi';
-import { Image, Play, X, Loader2, Code, Link } from 'lucide-react';
+import { ImageIcon, Play, X, Loader2, Code, Link } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createPost } from '@/lib/orbis';
 import { useToast } from '@/hooks/use-toast';
@@ -39,17 +39,17 @@ export function ComposeBox({
   const generateEmbedCode = (url: string): string | null => {
     try {
       const urlObj = new URL(url);
-      
+
       // YouTube
       if (urlObj.hostname.includes('youtube.com') || urlObj.hostname.includes('youtu.be')) {
-        const videoId = urlObj.hostname.includes('youtu.be') 
+        const videoId = urlObj.hostname.includes('youtu.be')
           ? urlObj.pathname.slice(1)
           : urlObj.searchParams.get('v');
         if (videoId) {
           return `<iframe width="560" height="315" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
         }
       }
-      
+
       // Twitter/X
       if (urlObj.hostname.includes('twitter.com') || urlObj.hostname.includes('x.com')) {
         return `<iframe src="https://twitframe.com/show?url=${encodeURIComponent(url)}" width="550" height="300" frameborder="0" scrolling="no" allowtransparency="true"></iframe>`;
@@ -79,7 +79,7 @@ export function ComposeBox({
     if (!embedUrl.trim()) return;
 
     let embedCode: string | null = null;
-    
+
     if (isDirectIframe) {
       // Direct iframe code input
       if (!embedUrl.includes('<iframe') || !embedUrl.includes('</iframe>')) {
@@ -132,6 +132,10 @@ export function ComposeBox({
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      console.log('Image selected:', file.name);
+      console.log('Image type:', file.type);
+      console.log('Image size:', file.size, 'bytes');
+
       // Check file size (5MB limit)
       if (file.size > 5 * 1024 * 1024) {
         toast({
@@ -155,13 +159,22 @@ export function ComposeBox({
 
       // Preview validation
       try {
+        console.log('Creating object URL for image preview...');
         const objectUrl = URL.createObjectURL(file);
         const img = new Image();
+
         img.onload = () => {
+          console.log('Image loaded successfully, dimensions:', img.width, 'x', img.height);
           URL.revokeObjectURL(objectUrl);
           setSelectedImage(file);
+          toast({
+            title: "Image ready",
+            description: "Image will be uploaded when you submit the post"
+          });
         };
+
         img.onerror = () => {
+          console.error('Failed to load image preview');
           URL.revokeObjectURL(objectUrl);
           toast({
             title: "Error",
@@ -169,8 +182,10 @@ export function ComposeBox({
             variant: "destructive"
           });
         };
+
         img.src = objectUrl;
       } catch (error) {
+        console.error('Error processing image:', error);
         toast({
           title: "Error",
           description: "Failed to process image",
@@ -183,18 +198,37 @@ export function ComposeBox({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim() && !selectedImage) return;
-    
+
     try {
       setIsUploading(true);
+      console.log('Submitting post with content length:', content.length);
+      if (selectedImage) {
+        console.log('Image will be uploaded:', selectedImage.name);
+      }
+
       await onSubmit(content, selectedImage);
+      console.log('Post submitted successfully');
+
+      // Reset form
       setContent('');
       setSelectedImage(null);
       setEmbedUrl('');
       setShowEmbedInput(false);
+
+      // Clear file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+
+      toast({
+        title: "Success",
+        description: "Post created successfully"
+      });
     } catch (error) {
+      console.error('Error submitting post:', error);
       toast({
         title: "Error",
-        description: "Failed to create post",
+        description: error instanceof Error ? error.message : "Failed to create post",
         variant: "destructive"
       });
     } finally {
@@ -216,7 +250,7 @@ export function ComposeBox({
           <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${address}`} />
           <AvatarFallback>You</AvatarFallback>
         </Avatar>
-        
+
         <div className="flex-1 space-y-4">
           <Textarea
             value={content}
@@ -265,7 +299,7 @@ export function ComposeBox({
                   Direct iframe code
                 </label>
               </div>
-              
+
               <div className="flex gap-2">
                 <textarea
                   value={embedUrl}
@@ -301,15 +335,17 @@ export function ComposeBox({
               </div>
             </div>
           )}
-          
+
           <input
             type="file"
             ref={fileInputRef}
             onChange={handleImageChange}
             accept="image/*"
             className="hidden"
+            aria-label="Upload image"
+            title="Upload image"
           />
-          
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1">
               <Button
@@ -319,8 +355,9 @@ export function ComposeBox({
                 className="text-muted-foreground hover:text-foreground hover:bg-accent"
                 onClick={handleImageClick}
                 disabled={isUploading}
+                aria-label="Add image"
               >
-                <Image className="h-5 w-5" />
+                <ImageIcon className="h-5 w-5" />
               </Button>
               <Button
                 type="button"
@@ -360,8 +397,8 @@ export function ComposeBox({
               <span className="text-xs text-muted-foreground">
                 {content.length}/{maxLength}
               </span>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={(!content.trim() && !selectedImage) || isSubmitting || isUploading}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 px-4 text-sm rounded-full disabled:bg-muted disabled:text-muted-foreground"
               >
