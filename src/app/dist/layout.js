@@ -2,7 +2,7 @@
 "use strict";
 exports.__esModule = true;
 exports.LoginButton = void 0;
-require("./globals.css");
+require("../globals.css");
 var theme_provider_1 = require("@/components/theme-provider");
 var notification_provider_1 = require("@/components/notification-provider");
 var auth_provider_1 = require("@/providers/auth-provider");

@@ -94,7 +94,8 @@ var getCurrentLeaderboard = function () {
             return pointsLeaderboard;
     }
 };
-return (React.createElement(main_layout_1.MainLayout, null,
+function LeaderboardPage() {
+    return (React.createElement(main_layout_1.MainLayout, null,
     React.createElement("div", { className: "flex-1 min-h-0 flex flex-col pb-16 md:pb-0" },
         React.createElement(page_header_1.PageHeader, { title: "Leaderboard" }),
         React.createElement(tabs_1.Tabs, { value: leaderboardType, onValueChange: function (value) { return setLeaderboardType(value); }, className: "w-full border-b border-border" },
@@ -134,5 +135,8 @@ return (React.createElement(main_layout_1.MainLayout, null,
                                 "Level ",
                                 user.level)),
                         user.userId !== (user === null || user === void 0 ? void 0 : user.id) && (React.createElement(button_1.Button, { variant: user.isFollowing ? "default" : "outline", size: "sm", className: "rounded-full", onClick: function () { return handleToggleFollow(user.userId); } }, user.isFollowing ? "Following" : "Follow"))))); })),
-                mounted && getCurrentLeaderboard().length === 0 && (React.createElement("div", { className: "p-8 text-center text-muted-foreground" }, "No data available yet")))))));
+                mounted && getCurrentLeaderboard().length === 0 && (React.createElement("div", { className: "p-8 text-center text-muted-foreground" }, "No data available yet"))))))));
+}
+
+exports.default = LeaderboardPage;
 var templateObject_1;
